@@ -21,7 +21,16 @@ For wavelength in mean wavelengths:
     Make line list
 ```
 
-The **installation** is simple - just clone the code in this repository, and download the transmission curves at https://drive.google.com/drive/folders/17kQAoU3txWDdn7Z1USVlhdDSTdPjHE_i?usp=sharing, and modify the ```base``` keyword to be your local path to the downloaded transmission curves. 
+The **installation** is simple - just clone the code in this repository, and download the transmission curves at https://drive.google.com/drive/folders/17kQAoU3txWDdn7Z1USVlhdDSTdPjHE_i?usp=sharing, and modify the ```base``` keyword to be your local path to the downloaded transmission curves. This subset of transmission curves should be enough for most situations, but it is not extensive.
+
+As an installation test, try
+
+```
+from RAGNAR import ragnar
+ragnar(steps_per_line = 10, min_wav = 800, max_wav = 850, pwvs = [0, 2.0], zds = [0,60], aerosols= ['volcanic'],  base = '../MODTRAN/')
+```
+
+If the code ran successfully, a `lineLists` directory should have been created with the new outputs.
 
 ```RAGNAR``` is very flexible, and takes a long range of keywords
 
