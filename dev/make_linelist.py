@@ -30,7 +30,7 @@ else:
 
 
 def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, counts, transmission_curves, transmission_wavs, wav_range, Nspec, Trot_0 = 195, Tvib_0 = 1e4,\
-                   importance_limit_group = 1e-2, dlambda = 15, line_spread = 0.1, resolution = np.inf, inclusion_limit = 1e-3, verbose = 1):
+                   importance_limit_group = 1e-2, dlambda = 15, line_spread = 0.1, resolution = np.inf, inclusion_limit = 1e-3, verbose = 1, data_path = 'data'):
     
     ''' Function to make a final DataFrame with good lines
     
@@ -67,11 +67,11 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
         dlambda = dlambda*(max_wav+min_wav)/2/resolution
     
     # get linelist
-    A = get_pgopher_linelist()
+    A = get_pgopher_linelist(path =  data_path)
 
     A['Intensity'] = make_OH_intensities(A, Trot_0, Tvib_0) #placeholder intensity, for finding relative importances
-    dfO2 = get_O2_at_T(Trot_0) #make fiducial O2 intensities
-    dfAtomic = get_atomic_lines() #make fiducial OI, Na intensities                
+    dfO2 = get_O2_at_T(Trot_0, path = data_path) #make fiducial O2 intensities
+    dfAtomic = get_atomic_lines(path = data_path) #make fiducial OI, Na intensities                
 
     A0 = pd.concat([A, dfO2, dfAtomic]) # merge dataframes
     
@@ -247,7 +247,7 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
 ############## Needs to change base path here ###############
 #############################################################
 
-def load_species_transmission(file = 'grid_mk50', species_include = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
+def load_species_transmission(file = 'grid_mk50', base = '~/../../tigress/cj1223/modtran_species_output', species_include = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
     '''Function which loads a low resolution MODTRAN6 curve, since the low res runs are the only ones that output species-based absorption
         Inputs:
         file: which modtran low res curve to use
@@ -259,9 +259,9 @@ def load_species_transmission(file = 'grid_mk50', species_include = ['combin', '
     if verbose == 2:
         print('Loading low-resolution species dependent transmission curve')
     
-    trans = pd.read_csv(osp.expanduser(f'~/../../tigress/cj1223/modtran_species_output/{file}.csv'), skiprows = 3, nrows = 1, engine='python') # load file to get column names
+    trans = pd.read_csv(osp.expanduser(base+f'/{file}.csv'), skiprows = 3, nrows = 1, engine='python') # load file to get column names
     columns = trans.columns
-    trans = pd.read_csv(osp.expanduser(f'~/../../tigress/cj1223/modtran_species_output/{file}.csv'), skiprows = 4, skipfooter = 1, engine='python') # load data
+    trans = pd.read_csv(osp.expanduser(base+f'/{file}.csv'), skiprows = 4, skipfooter = 1, engine='python') # load data
     trans.columns = columns
     
     mins = trans.describe().iloc[3] # get the minimums of transmission per species
@@ -273,7 +273,7 @@ def load_species_transmission(file = 'grid_mk50', species_include = ['combin', '
     trans = trans[['nm']+species_include] ## these are the only species that we care about (as decided by yours truly, CKJ)
     return trans
 
-def add_absorption_origin(lineDf, line_spread = 0.1, resolution = np.inf, total_lim = 0.95, contribution_lim = 0.99, originDf_file = 'grid_mk50', \
+def add_absorption_origin(lineDf, line_spread = 0.1, resolution = np.inf, total_lim = 0.95, contribution_lim = 0.99, base = '~/../../tigress/cj1223/modtran_species_output', originDf_file = 'grid_mk50', \
                           important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
     '''Given a DataFrame with lines, WITH TRANSMISSION ALREADY CALCULATED FROM LBL, add likely origin of the absorption
     
@@ -292,7 +292,7 @@ def add_absorption_origin(lineDf, line_spread = 0.1, resolution = np.inf, total_
     if verbose == 2:
         print(f'Considering {important_species} for absorption origins. The bitmask in the linelist will be in this order.')
     
-    trans_species = load_species_transmission(file = originDf_file, species_include = important_species)
+    trans_species = load_species_transmission(file = originDf_file, base = base, species_include = important_species)
         
     masks = [] # the masks for a given species to be important
     

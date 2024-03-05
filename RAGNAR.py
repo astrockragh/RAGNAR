@@ -8,9 +8,9 @@ from dev import make_dataframe, add_absorption_origin
 
 def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'lineList_test', importance_limit_group = 1e-2, chem_scatters = 3,\
                   min_wav = 360, max_wav = 1300, steps_per_line = 100, line_spread = 0.1, resolution = np.inf, dlambda = 15, intensity_cut = 0.0, inclusion_limit = 1e-3,\
-                  linewidth_scatters = 1, LSF_err = 0.03, continuum = True, aerosols = ['background', 'volcanic'], pwvs = [1.0], zds = [0, 40], base = '~/../../tigress/cj1223/', \
+                  linewidth_scatters = 1, LSF_err = 0.03, continuum = True, aerosols = ['background', 'volcanic'], pwvs = [0.0, 2.0], zds = [0, 40], base = '~/../../tigress/cj1223/', \
                   data_path = 'data/', use_centroider = False, total_lim = 0.95, contribution_lim = 0.99, originDf_file = 'grid_mk50',\
-                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
+                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], obs = 'MaunaKea', verbose = 0):
     
     '''Function make a linelist for use for wavelength calibration
     
@@ -40,13 +40,15 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     aerosols: list of aerosol models to loop over. 'background', 'volcanic' are possible
     pwvs: list precipitable water vapour to loop over [mm]. From 0.0, to 20.0, in increments of 1 are possible
     zds: list of zenith declination of telescope to loop over [degrees]. 0 to 80 in increments of 10 are possible
-    base: The base path of the MODTRAN outputs. Can be tigress/c1223/ or scratch/gpfs/cj1223/
+    base: The base path of the MODTRAN outputs. Can be tigress/c1223/ or scratch/gpfs/cj1223/ if you're at princeton
     
     total_lim: if a line has transmission below this, consider it significantly attenuated
     contribution_lim: if a species has transmission below this for a given line, it contributes significantly
-    originDf_file: which modtran low res curve to use to estimate possible absorption origin
+    originDf_file: which modtran low res curve to use to estimate possible absorption origin. There is not much point in changing away from the default
     important_species: what absorption origins to consider
     
+    obs: which observing site to do transmission calculations for, see github/google drive for which sites are already available
+
     verbose: 0 = print almost nothing, 1 = print things to follow the progress, 2 = print enough to do some approximative debugging
     
     --------------------------
@@ -59,9 +61,9 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
         resolution*=2.82982 #convert from Rayleigh Criterion to Gaussian resolution definition
     
     if LSF_err > 0.1 and linewidth_scatters>1:
-        print('The LSF_err is potentially too high. It should ideally be below 0.10, and is typically below 0.05')
+        print('The LSF_err is potentially too high. It should ideally be below 0.10, and is typically below 0.05.')
         if verbose != 0:
-            inp = input('Are you sure that you want to continue? Press 1 to continue, and any other button to break')
+            inp = input('Are you sure that you want to continue? Press 1 to continue. Press any other button to break.')
             if int(inp)!=1:
                 print('Please lower the LSF_err and try again')
                 return _, _, _, _, _, _, _, _
@@ -85,7 +87,7 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
 
     peak_wavs, specs, continuum_specs, transmission_curves, transmission_wavs = get_spectra_and_peaks(wav_range, Trots = Trots, Tvibs = Tvibs, chem_scatters = chem_scatters, linewidth_scatters = linewidth_scatters,\
                           LSF_err = LSF_err, inclusion_limit = inclusion_limit, cont = continuum, intensity_cut = intensity_cut, line_spread = line_spread, resolution = resolution, dlambda = dlambda, use_centroider = use_centroider,\
-                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, verbose = verbose)
+                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, obs = obs, verbose = verbose)
     if verbose!=0:
         print('Finding the common lines')
         
@@ -117,7 +119,7 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     number_of_spectra = len(specs)
         
     lineDf, A0 = make_dataframe(mu_wav, var_wav, mu_I, var_I, counts, transmission_curves, transmission_wavs, wav_range, Nspec = number_of_spectra, Trot_0 = np.mean(Trots), Tvib_0 = np.mean(Tvibs),\
-                                importance_limit_group = importance_limit_group, dlambda = dlambda, line_spread = line_spread, resolution = resolution, inclusion_limit = inclusion_limit, verbose = verbose)
+                                importance_limit_group = importance_limit_group, dlambda = dlambda, line_spread = line_spread, resolution = resolution, inclusion_limit = inclusion_limit, data_path = data_path, verbose = verbose)
 
     ########################################
     ### Add the origin of the absorption ###
@@ -126,7 +128,8 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     if verbose > 0:
         print('Adding likely origin of the absorption')
     
-    lineDf = add_absorption_origin(lineDf, line_spread = line_spread, resolution = resolution, total_lim = total_lim, contribution_lim = contribution_lim, originDf_file = originDf_file, important_species = important_species)
+    lineDf = add_absorption_origin(lineDf, line_spread = line_spread, resolution = resolution, total_lim = total_lim, contribution_lim = contribution_lim, base = base,
+                                    originDf_file = originDf_file, important_species = important_species)
     
     if verbose>0:
         print(f'Linelist with {len(lineDf)} stable lines in has been made')
