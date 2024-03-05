@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 lineLists
 lineLists/
+.DS_store
 
 #egg file and pycaches
 RAGNAR.egg-info
