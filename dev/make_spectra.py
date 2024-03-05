@@ -644,7 +644,8 @@ def load_transmission(aerosol, pwv, zd, basedir, obs = 'MaunaKea', min_wav = 360
     --------------------------
     Returns: DataFrame with transmission curve
     '''
-    path = osp.expanduser(basedir+f'modtran_output_LBL_{aerosol}/{obs}_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
+    
+    path = osp.expanduser(basedir+f'{obs}_aerosol_{aerosol}_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
 
     trans = pd.read_csv(path, skiprows = 7, skipfooter = 1, engine='python') # read the csv
     trans.columns = ['Freq', 'combin', 'total', 'path', 'surface'] # define column names without weird spaces. Could consider dropping the last three columns since they are not used
