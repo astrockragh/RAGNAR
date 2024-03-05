@@ -31,7 +31,7 @@ else:
 
 def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], linewidth_scatters = 3, LSF_err = 0.05, inclusion_limit = 1e-3, chem_scatters = 3, use_centroider = True,\
                           intensity_cut = 5e-6, line_spread = 0.1, resolution = np.inf, dlambda = 15, aerosols = ['background', 'volcanic'],\
-                          pwvs = [0.0, 2.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = 'data/', verbose = 1):
+                          pwvs = [0.0, 2.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = 'data/', obs = 'MaunaKea', verbose = 1):
     
     '''
     Function to simulate spectra, and find the wavelength peaks of those spectra
@@ -55,6 +55,7 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
     zds: list of zenith declination of telescope to loop over [degrees]. 0 to 80 in increments of 10 are possible
     base: The base path of the MODTRAN outputs. 
     data_path: The base path of the atomic/molecular parameter inputs
+    obs: name of the observing site for which the transmission is loaded, see the google drive for possible sites
 
     
     verbose: Print Level, 0,1,2 available
@@ -107,7 +108,7 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
                     print(f'Loading transmission curve with {aerosol} aerosol model, {pwv:.2f} mm PWV, and {zd:.0f} degree telescope zenith declination angle')
                     start = time.time()
                     
-                trans = load_transmission(aerosol, pwv, zd, basedir = base, min_wav = min_wav, max_wav = max_wav)
+                trans = load_transmission(aerosol, pwv, zd, obs = obs, basedir = base, min_wav = min_wav, max_wav = max_wav)
                 
                 if verbose != 0:
                     stop = time.time()
@@ -628,7 +629,7 @@ def define_lines_and_intensities(peak_wavs, specs, wav_range, line_spread = 0.1,
 ### Transmission related stuff ###
 ##################################
 
-def load_transmission(aerosol, pwv, zd, basedir, min_wav = 360, max_wav = 1290):
+def load_transmission(aerosol, pwv, zd, basedir, obs = 'MaunaKea', min_wav = 360, max_wav = 1290):
     '''Function to load a Line-By-Line (LBL) MODTRAN6 transmission curve DataFrame with a given aerosol model, PWV (in mm) and ZD. 
     aerosol model for Mauna Kea should be either 'volcanic' or 'background'
     Only returns transmission curves in |min_wav, max_wav| interval 
@@ -643,7 +644,7 @@ def load_transmission(aerosol, pwv, zd, basedir, min_wav = 360, max_wav = 1290):
     --------------------------
     Returns: DataFrame with transmission curve
     '''
-    path = osp.expanduser(basedir+f'modtran_output_LBL_{aerosol}/MaunaKea_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
+    path = osp.expanduser(basedir+f'modtran_output_LBL_{aerosol}/{obs}_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
 
     trans = pd.read_csv(path, skiprows = 7, skipfooter = 1, engine='python') # read the csv
     trans.columns = ['Freq', 'combin', 'total', 'path', 'surface'] # define column names without weird spaces. Could consider dropping the last three columns since they are not used
