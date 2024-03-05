@@ -3,7 +3,7 @@
 
 ```RAGNAR```, the Resolution Adaptive Generator of Nocturnal Airglow Radiation, to generate robust line lists for wavelength calibration and climatology.
 
-```RAGNAR``` works by simulating the emission of the nocturnal airglow in the optical and near-infrared, varying all relevant parameters to determine the intrinsic variability of each possible line, at a given resolution. A quick overlook of the inner workings of the code is
+```RAGNAR``` works by simulating the emission of the nocturnal airglow in the optical and near-infrared, varying all relevant parameters to determine the intrinsic variability of each possible line, at a given resolution. A quick overlook of the philosphy of the inner workings of the code is
 
 ```
 for Condtion, Instrumental Effect in {Conditions, Instruments}:
@@ -17,7 +17,7 @@ For peaks in saved peaks:
     Find mean and variation of the wavelength and intensity of all peaks
 
 For wavelength in mean wavelengths:
-    Construnct line information
+    Retrieve extra line information (transmission, closest neighbor, labels, ...)
     Make line list
 ```
 
