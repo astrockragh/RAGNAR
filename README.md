@@ -5,24 +5,21 @@
 
 ```RAGNAR``` works by simulating the emission of the nocturnal airglow in the optical and near-infrared, varying all relevant parameters to determine the intrinsic variability of each possible line, at a given resolution. A quick overlook of the inner workings of the code is
 
-$
-\For{Condition in Atmospheric Conditions, Resolution
-    \State Simulate spectrum
-    \State Find peak wavelengths
-    \State Save wavelengths
-\EndFor
+```
+for Condtion, Instrumental Effect in {Conditions, Instruments}:
+    Simulate spectrum
+    Find peak wavelengths
+    Save peaks
 
-\For{ Peaks in Saved Wavelengths`
-    \State Crossmatch stable peaks
-    \State Crossmatch unstable peaks
-    \State Find mean and variation of the wavelength and intensity
-\EndFor
+For peaks in saved peaks:
+    Crossmatch stable peaks
+    Crossmatch unstable peaks
+    Find mean and variation of the wavelength and intensity of all peaks
 
-\For{ Wavelengths in Mean Wavelengths`
-    \State Record line information
-    \State Make line list
-\EndFor
-$
+For wavelength in mean wavelengths:
+    Construnct line information
+    Make line list
+```
 
 The **installation** is simple - just clone the code in this repository, and download the transmission curves at https://drive.google.com/drive/folders/17kQAoU3txWDdn7Z1USVlhdDSTdPjHE_i?usp=sharing, and modify the ```base``` keyword to be your local path to the downloaded transmission curves. 
 
