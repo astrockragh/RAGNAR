@@ -132,6 +132,8 @@ def add_covariation(lineDf, specs, wav_range, sigma, threshold = 0.01, robust_on
         covar_n: number of lines in the group
         covar_scatter: the largest scatter of ln(I_i/I_j) to the other lines in the group (0 for a line on its own)
         covar_nearest: the smallest scatter of ln(I_i/I_j) to any other considered line, i.e. how close a single line is to having a partner
+        linear_group, linear_n, linear_scatter, linear_nearest: the same for lines whose intensities lie on a straight line with each other
+            (intercept allowed, linear_scatter), which includes the fixed-ratio pairs
     Inputs:
         specs, wav_range: the line-only simulated spectra (no continuum) and their wavelength grid
         sigma: the Gaussian LSF width [nm], scalar or one per line, for the upper-state decomposition
@@ -150,14 +152,17 @@ def add_covariation(lineDf, specs, wav_range, sigma, threshold = 0.01, robust_on
     for c in us.columns:
         lineDf[c] = us[c].to_numpy()
     lineDf['covar_group'], lineDf['covar_n'], lineDf['covar_scatter'], lineDf['covar_nearest'] = _group_columns(S, groups, considered, len(lineDf))
+    L = linear_scatter(I[:, considered]) # the same, for lines that change linearly together (intercept allowed)
+    lineDf['linear_group'], lineDf['linear_n'], lineDf['linear_scatter'], lineDf['linear_nearest'] = _group_columns(L, covariation_groups(L, threshold), considered, len(lineDf))
     return lineDf, {'I': I, 'S': S, 'considered': np.flatnonzero(considered), 'threshold': threshold}
 
-def combine_covariation(runs, threshold = 0.01, robust_only = True, min_intensity = 0.0, names = None):
+def combine_covariation(runs, threshold = 0.01, robust_only = True, min_intensity = 0.0, names = None, metric = 'ratio'):
     '''
     Group lines across several runs that simulated the same skies (e.g. the arms of a spectrograph, run with the same grid and seed).
     runs: list of (lineDf with the add_covariation columns, I (Nspec, Nline), params (Nspec, len(PARAM_NAMES)) or None), or of paths to the
           *_covar.npz files written by ragnar()
     Every run must have the same number of spectra, and the emission parameters (everything but lsf_factor) must agree spectrum by spectrum.
+    metric: 'ratio' (fixed ratio, ratio_scatter, columns covar_*_all) or 'linear' (on a straight line, linear_scatter, columns linear_*_all)
     Returns a DataFrame of the considered lines of all runs (run, line_index, wav, intensity, upper_state, vgroup, ..., covar_group_all
     across runs) and their ratio scatter S
     '''
@@ -184,10 +189,11 @@ def combine_covariation(runs, threshold = 0.01, robust_only = True, min_intensit
         Is.append(I[:, keep])
     T = pd.concat(tabs, ignore_index = True)
     I = np.hstack(Is)
-    S = ratio_scatter(I)
+    S = ratio_scatter(I) if metric == 'ratio' else linear_scatter(I)
     groups = covariation_groups(S, threshold)
     g, size, worst, nearest = _group_columns(S, groups, np.ones(len(T), dtype = bool), len(T))
-    T['covar_group_all'], T['covar_n_all'], T['covar_scatter_all'], T['covar_nearest_all'] = g, size, worst, nearest
+    pre = 'covar' if metric == 'ratio' else 'linear'
+    T[f'{pre}_group_all'], T[f'{pre}_n_all'], T[f'{pre}_scatter_all'], T[f'{pre}_nearest_all'] = g, size, worst, nearest
     return T, S
 
 def save_covariation(path, lineDf, info, params = None):
@@ -208,3 +214,117 @@ def load_covariation(path, lineDf = None):
         raise ValueError(f'{path} does not belong to the given line list')
     P = d['params'] if len(d['params']) else None
     return lineDf, d['I'].astype(float), P
+
+###########################################################
+### Lines and sections that change linearly together ###
+###########################################################
+
+def linear_scatter(I):
+    '''
+    L[i, j] = fractional rms residual of the best straight line (with intercept) between the intensities of lines i and j over the spectra,
+    in units of the mean intensity, the larger of the two directions: sqrt(1 - r_ij^2)*max(cv_i, cv_j), with r the correlation and cv the
+    coefficient of variation. Lines with a fixed ratio have L ~ S; L can be small when the ratio changes but the two still move on one line.
+    '''
+    mu, sd = I.mean(axis = 0), I.std(axis = 0)
+    Z = (I - mu)/np.where(sd > 0, sd, 1)
+    r = np.clip(Z.T @ Z/len(I), -1, 1)
+    cv = sd/np.where(mu > 0, mu, np.inf)
+    L = np.sqrt(np.maximum(0, 1 - r**2))*np.maximum(cv[:, None], cv[None, :])
+    L = (L + L.T)/2
+    np.fill_diagonal(L, 0)
+    return L
+
+def bin_spectra(wav_range, specs, lo, hi, pix):
+    ''' average fine-grid spectra (Nspec rows) into pixels of width pix on lo-hi; returns pixel centres and (Nspec, Npix) '''
+    centres = np.arange(lo + pix/2, hi - pix/2, pix)
+    e = np.searchsorted(wav_range, np.r_[centres - pix/2, centres[-1] + pix/2])
+    S = np.asarray(specs)
+    Y = np.add.reduceat(S[:, e[0]:e[-1]], e[:-1] - e[0], axis = 1)/np.diff(e)[None, :]
+    return centres, Y
+
+def _rank1_residual(G, norm):
+    ''' fractional residual of the best rank-1 fit, from the Gram matrix G of the block and the normalisation sum(mean^2)*Nspec '''
+    ev = np.linalg.eigvalsh(G)
+    return np.sqrt(max(0.0, ev.sum() - ev[-1])/norm)
+
+def linear_sections(wav, Y, threshold = 0.01, lookahead = 3, max_width = 10.0, local = True):
+    '''
+    Split a spectrum into contiguous sections in which all pixels change linearly together over the simulated spectra:
+    within a section, every spectrum is mean(lambda) + a(spectrum)*mode(lambda), up to `threshold`. Section edges sit at local minima of the
+    mean spectrum (features = one peak with its surroundings), so lines are not cut. The split uses the fewest sections; a feature that is
+    not linear even on its own comes out as a single section that fails the threshold (linear = False).
+    The residual of the one-mode fit is the rms over pixels and spectra relative to the rms of the mean spectrum:
+        local = True: for every feature of the section, relative to that feature's own flux, and the worst feature counts (E_worst), so a
+                      bright line cannot carry faint ones that do not follow it
+        local = False: over the whole section (E_affine), i.e. flux weighted
+    Inputs:
+        wav, Y: pixel centres [nm] and (Nspec, Npix) spectra on them (line-only; a continuum that is the same in every spectrum changes nothing)
+        lookahead: features to keep adding after the threshold is first exceeded, in case the next ones bring the residual back down
+        max_width: longest section to consider [nm]
+    Returns a DataFrame of sections (lo, hi, i0, i1 pixel range, n_feat, flux, E_worst, E_affine, E_prop, mode_frac, linear, flux_frac) and
+    the per-spectrum flux of each section (Nspec, Nsec), for comparing sections with each other (linear_scatter on it).
+    E_prop is the whole-section residual without the intercept (shape fixed, only the scale changing); mode_frac the variance in the mode.
+    '''
+    Y = np.asarray(Y, dtype = float)
+    ns = len(Y)
+    m = Y.mean(axis = 0)
+    Xc = Y - m
+    colsq = np.sum(Xc**2, axis = 0)
+    mins = np.flatnonzero((m[1:-1] <= m[:-2]) & (m[1:-1] < m[2:])) + 1
+    b = np.r_[0, mins, len(m)] # feature k is pixels b[k]:b[k+1]
+    K = len(b) - 1
+    fnorm = np.array([ns*np.sum(m[b[k]:b[k+1]]**2) for k in range(K)])
+
+    def residuals(k, j, G):
+        ''' (E_worst, E_affine) of the section of features k..j-1 with Gram matrix G '''
+        ev, V = np.linalg.eigh(G)
+        u = V[:, -1]
+        win = slice(b[k], b[j])
+        res = colsq[win] - (u @ Xc[:, win])**2
+        rf = np.add.reduceat(res, b[k:j] - b[k])
+        fn = fnorm[k:j]
+        worst = np.sqrt(np.max(np.where(fn > 0, np.maximum(rf, 0)/np.where(fn > 0, fn, 1), 0)))
+        return worst, np.sqrt(max(0.0, ev.sum() - ev[-1])/max(fn.sum(), 1e-300))
+
+    ok = [dict() for _ in range(K)] # ok[k][j]: residual of the section of features k..j-1
+    for k in range(K):
+        G = np.zeros((ns, ns)); bad = 0
+        for j in range(k + 1, K + 1):
+            sl = slice(b[j-1], b[j])
+            G += Xc[:, sl] @ Xc[:, sl].T
+            worst, glob = residuals(k, j, G)
+            E = worst if local else glob
+            if E <= threshold or j == k + 1:
+                ok[k][j] = E
+            if E > threshold:
+                bad += 1
+                if bad > lookahead:
+                    break
+            else:
+                bad = 0
+            if wav[b[j] - 1] - wav[b[k]] > max_width:
+                break
+    # fewest sections covering every feature (a feature that fails on its own is allowed as a section of its own)
+    best = np.full(K + 1, np.inf); prev = np.zeros(K + 1, dtype = int); best[0] = 0
+    for j in range(1, K + 1):
+        for k in range(j):
+            if j in ok[k] and (ok[k][j] <= threshold or j == k + 1) and best[k] + 1 < best[j]:
+                best[j], prev[j] = best[k] + 1, k
+    cuts, j = [], K
+    while j > 0:
+        cuts.append((prev[j], j)); j = prev[j]
+    rows, F = [], []
+    for k, j in cuts[::-1]:
+        i0, i1 = b[k], b[j]
+        B = Y[:, i0:i1]
+        Gc = Xc[:, i0:i1] @ Xc[:, i0:i1].T
+        worst, glob = residuals(k, j, Gc)
+        ev = np.linalg.eigvalsh(Gc)
+        rows.append(dict(lo = wav[i0], hi = wav[i1 - 1], i0 = i0, i1 = i1, n_feat = j - k, flux = float(m[i0:i1].sum()),
+                         E_worst = worst, E_affine = glob, E_prop = _rank1_residual(B @ B.T, fnorm[k:j].sum()),
+                         mode_frac = float(ev[-1]/ev.sum()) if ev.sum() > 0 else 1.0))
+        F.append(B.sum(axis = 1))
+    T = pd.DataFrame(rows)
+    T['linear'] = (T.E_worst if local else T.E_affine) <= threshold
+    T['flux_frac'] = T.flux/m.sum()
+    return T, np.vstack(F).T

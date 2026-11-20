@@ -87,8 +87,11 @@ For all of these fun options, sophisticated line lists are output, containing in
 - `covar_n`: The number of lines in the group.
 - `covar_scatter`: The largest scatter of ln(I_i/I_j) to the other lines in the group.
 - `covar_nearest`: The smallest scatter of ln(I_i/I_j) to any other grouped line, i.e. how close a line on its own is to having a partner.
+- `linear_group`, `linear_n`, `linear_scatter`, `linear_nearest`: The same for lines whose intensities lie on a straight line with each other over the simulated spectra (an intercept is allowed, so this includes the fixed-ratio pairs). The scatter is the fractional rms residual from that line.
 
 With `save_name`, the intensity of every line in every simulated spectrum is also saved as `lineLists/{save_name}_{date}_covar.npz`. Runs that simulated the same skies (the same grid and the same seed, e.g. the arms of one spectrograph) can then be grouped together with `dev.covariation.combine_covariation`. The intensities are line-only (no continuum), so measure the lines in data above a local baseline taken from the data, not from the `continuum` column. `pfs_covar/` tests the groups against PFS sky spectra.
+
+For tests that need a stretch of spectrum that changes as one, `dev.covariation.linear_sections(wav, Y, threshold = 0.01)` splits simulated spectra `Y` (e.g. the saved spectra, averaged into pixels with `bin_spectra`) into contiguous sections in which every spectrum is the mean plus one amplitude times one fixed pattern, with every feature following that pattern to within `threshold` of its own flux. Section edges sit at minima of the mean spectrum. `pfs_covar/sections.py` runs it on the PFS arms. RAGNAR draws the chemistry of all species from one quantile, so sections that mix species (OH with O2, OI or Na) can look linear only because of that.
 - `err_important`: The intensity error in considering only the sublines which contribute more than a preset fraction of the total line intensity at line centre.
 - `origin_Ids`: The `ID`'s of the lines in the table which contain detailed information about all sublines.
 - `transmission`: The average atmospheric transmission of the line.

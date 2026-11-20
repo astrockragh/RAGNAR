@@ -70,7 +70,7 @@ a { color: var(--accent); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ctl-label { font-size: 12px; color: var(--fg-3); margin-right: 8px; }
 
-.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0; align-content: start; }
 .cap { font-size: 13px; color: var(--fg-2); max-width: 90ch; }
 .panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
 .panels.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
@@ -83,6 +83,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .mbox .xh { position: absolute; background: var(--fg); opacity: 0.55; pointer-events: none; }
 .bigrow { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
 @media (max-width: 900px) { .bigrow { grid-template-columns: 1fr; } }
+.famrow { display: grid; grid-template-columns: minmax(0, 560px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .famrow { grid-template-columns: 1fr; } }
 .strip { height: 8px; width: 100%; display: block; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 12px; color: var(--fg-2); }
 .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
@@ -131,7 +133,7 @@ pre { background: var(--surface-2); border-radius: 6px; padding: 14px; overflow-
 <header class="stack">
   <div class="eyebrow">RAGNAR · PFS b / r / n / m · cent=0 fix4 runs · 2026-11-20</div>
   <h1>Which PFS sky lines vary together</h1>
-  <p class="lede">RAGNAR now groups the lines whose intensity ratios stay fixed over all the skies it simulates. These are the groups for the four PFS arms, tested on the sky spectra the LSFs were calibrated on.</p>
+  <p class="lede">RAGNAR now groups the lines whose intensity ratios stay fixed over all the skies it simulates, and finds the sections of spectrum that change linearly together. These are the groups and sections for the four PFS arms; the groups are tested on the sky spectra the LSFs were calibrated on.</p>
   <p class="meta">Branch <span class="mono">ragnar-new-2026</span> of astrockragh/RAGNAR · <span class="mono">dev/covariation.py</span>, <span class="mono">pfs_covar/</span></p>
 </header>
 
@@ -265,11 +267,55 @@ T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz',
                            names = ['b', 'r', 'n', 'm'], threshold = 0.01)</code></pre>
   <p class="meta">Line tables: pfs_covar/out/covar_lines.csv, covar_groups.csv · runs: run_brnm_fix4_cent0_20261120.slurm · data: validation/tier2/sky_stack_*, /scratch/gpfs/cj1223/pfs_sky_medium</p>
 </section>
+
+<section class="stack" id="linear">
+  <div class="prose stack">
+    <h2>Sections that change linearly together</h2>
+    <p>For calibration tests that need a stretch of spectrum that moves as one. Within a section, every simulated sky is the mean spectrum plus one amplitude times one fixed pattern. Every feature in the section (one peak with its surroundings) has to follow that pattern to within the tolerance of its own flux, so a bright line cannot carry faint ones that do not follow it. The skies are the 120 per arm at the nominal LSF (Trot, Tvib, hot population, chemistry and PWV vary). Edges sit at minima of the mean spectrum, so no line is cut. The split uses the fewest sections. A <i>proportional</i> section also has no intercept: its shape stays fixed and only its scale changes.</p>
+    <p id="secSummary"></p>
+  </div>
+  <div class="figure">
+    <div class="controls">
+      <div><span class="ctl-label">Tolerance</span><span class="seg" id="segTh"><button type="button" data-v="1">1%</button><button type="button" data-v="2">2%</button><button type="button" data-v="5">5%</button></span></div>
+      <div><span class="ctl-label">Arm</span><span class="seg" id="segArm"><button type="button" data-v="b">b</button><button type="button" data-v="r">r</button><button type="button" data-v="n">n</button><button type="button" data-v="m">m</button></span></div>
+    </div>
+    <div class="panel"><h4>Whole arm</h4><div class="sub">Click to move the detail window. Bars: linear sections with two or more features.</div><canvas id="secOver" style="width:100%;height:90px;display:block;cursor:pointer"></canvas></div>
+    <div class="panel"><h4 id="secDetailTitle">Detail</h4><div class="sub">Mean simulated sky (line-only, log scale) with ±1σ over the skies. Hover a section for its numbers.</div><canvas id="secDetail" style="width:100%;height:280px;display:block"></canvas></div>
+    <div class="legend" id="secLegend"></div>
+  </div>
+  <div class="figure">
+    <h3>By arm and tolerance</h3>
+    <div class="tbl-wrap"><table id="secTable"></table></div>
+  </div>
+  <div class="figure">
+      <h3>Sections</h3>
+      <div class="controls"><label class="chk"><input type="checkbox" id="secMulti" checked> Two or more features only</label><span class="muted" id="secCount"></span></div>
+      <div class="scroll" style="max-height:440px"><table id="secList"><thead><tr><th class="n">λ range [nm]</th><th class="n">Width</th><th class="n">Feat.</th><th>Mostly</th><th class="n">Worst</th><th>Shape</th><th class="n">Family</th><th>Driven by</th></tr></thead><tbody></tbody></table></div>
+  <div class="figure">
+      <h3>Sections that also move with each other</h3>
+      <p class="cap">Linear sections of all four arms (the runs simulated the same skies). A cell shows how far the two sections' fluxes are from a straight line with each other. Dark blocks are families: sections anywhere in the spectrum that change linearly together. Click a cell for the family.</p>
+      <div class="famrow">
+        <div class="panel"><div class="mbox" id="famBox"></div><div class="ramp" id="rampF"></div></div>
+        <div class="details" id="famDetails"><span class="muted">Click the matrix to list a family.</span></div>
+      </div>
+  </div>
+  <div class="prose stack">
+    <h3>What these sections can and cannot carry</h3>
+    <ul class="findings">
+      <li class="warn"><span>RAGNAR draws the chemistry of all species from one quantile, so OH, O₂, OI and Na move along one curve in the simulations. No section that passes mixes species (more than 2% of its line intensity from a second species), and I would keep it that way: real skies vary those species independently.</span></li>
+      <li class="warn"><span>The fix4 grid has two values each of Trot and Tvib. A section is tested through the way the parameters combine, but curvature along a single parameter is not visible with two values. A denser grid (and independent species draws) would make the sections safer for a test on many exposures.</span></li>
+      <li><span>A continuum that is the same in every exposure only shifts the intercept. A changing one (moonlight, twilight) adds a second pattern in real data, so subtract a local baseline first or give the continuum its own term.</span></li>
+      <li><span>The LSF is held at its nominal width. If the test spans LSF changes (fibres, spectrographs), a single feature stays linear but neighbours can stop following each other.</span></li>
+      <li class="warn"><span>The two-night PFS data cannot test this. With two sky states any change is a straight line. It takes three or more clearly different skies, such as a night's sequence of visits.</span></li>
+    </ul>
+  </div>
+</section>
 </div>
 
 <div class="tip" id="tip" hidden></div>
 
 <script type="application/json" id="data">/*DATA*/</script>
+<script type="application/json" id="secdata">/*SECTIONS*/</script>
 <script>
 (async function () {
 const REP = JSON.parse(document.getElementById('data').textContent);
@@ -620,12 +666,99 @@ function renderGroups() {
   });
 }
 
+
+// ---------- linear sections ----------
+const SEC = JSON.parse(document.getElementById('secdata').textContent);
+const secState = { th: '1', arm: 'r', centre: null };
+const secRows = th => { const t = SEC.sections[th], c = t.columns; return t.data.map((r, i) => { const o = { id: i }; c.forEach((k, j) => o[k] = r[j]); return o; }); };
+const SROWS = {}; for (const th in SEC.sections) SROWS[th] = secRows(th);
+const famMats = {};
+async function famMat(th) {
+  if (!famMats[th]) { const f = SEC.families[th], n = f.order.length; famMats[th] = { order: f.order, n, M: unpack(await inflate(f.L), n, 0) }; }
+  return famMats[th];
+}
+for (const th in SEC.families) await famMat(th);
+function secSummary() {
+  let h = '<thead><tr><th>Arm</th><th>Tolerance</th><th class="n">Linear sections</th><th class="n">2+ features</th><th class="n">Share of the flux</th><th class="n">Median width</th><th class="n">Widest</th><th class="n">Proportional too</th></tr></thead><tbody>';
+  for (const arm of ARMS) for (const th of ['1', '2', '5']) {
+    const L = SROWS[th].filter(r => r.arm === arm && r.linear), w = L.map(r => r.hi - r.lo).sort((a, b) => a - b);
+    h += `<tr${th === secState.th && arm === secState.arm ? ' class="hl"' : ''}><td>${th === '1' ? arm : ''}</td><td>${th}%</td><td class="n">${L.length}</td><td class="n">${L.filter(r => r.n_feat > 1).length}</td><td class="n">${pct(L.reduce((a, r) => a + r.flux_frac, 0), 0)}</td><td class="n">${w.length ? w[w.length >> 1].toFixed(2) : ''} nm</td><td class="n">${w.length ? w[w.length - 1].toFixed(1) : ''} nm</td><td class="n">${L.filter(r => r.E_prop <= Number(th) / 100).length}</td></tr>`; }
+  $('#secTable').innerHTML = h + '</tbody>';
+  const all1 = SROWS['1'].filter(r => r.linear), multi1 = all1.filter(r => r.n_feat > 1), all5 = SROWS['5'].filter(r => r.linear);
+  const wid = a => Math.max(...a.map(r => r.hi - r.lo));
+  $('#secSummary').innerHTML = `At 1%, almost every resolved feature is linear on its own (${all1.length} sections hold ${pct(all1.reduce((a, r) => a + r.flux_frac, 0) / 4, 0)} of the flux, averaged over the arms), but neighbours rarely join: ${multi1.length} sections have two or more features, the widest ${wid(multi1).toFixed(1)} nm. Neighbours join when they come from one v′ with nearby J′, often one upper state in two branches. At 5% sections reach ${wid(all5).toFixed(0)} nm: high-J v′ = 9 lines in the blue, which move with Tvib, and the O₂ b band at 863–867 nm. Sections far apart in the spectrum, and in different arms, often move linearly with each other (right-hand matrix).`;
+}
+function secColor(r) { return !r.linear ? ['--bad', 0.16] : r.n_feat > 1 ? ['--s1', 0.42] : ['--s1', 0.13]; }
+function rgba(v, a) { const [r, g, b] = hex(tok(v)); return `rgba(${r},${g},${b},${a})`; }
+function fitCanvas(cv) { const d = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; cv.width = Math.round(w * d); cv.height = Math.round(h * d); const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); return [c, w, h]; }
+function drawSpec(cv, lo, hi, opts) {
+  const sp = SEC.spec[secState.arm], rows = SROWS[secState.th].filter(r => r.arm === secState.arm && r.hi >= lo && r.lo <= hi);
+  const [c, W, H] = fitCanvas(cv), pad = { l: opts.axes ? 46 : 4, r: 6, t: 6, b: opts.axes ? 26 : 6 };
+  const X = w => pad.l + (w - lo) / (hi - lo) * (W - pad.l - pad.r);
+  const i0 = Math.max(0, sp.wav.findIndex(w => w >= lo) - 1), i1 = Math.min(sp.wav.length, (sp.wav.findIndex(w => w > hi) + 1) || sp.wav.length);
+  let ymax = 0; for (let i = i0; i < i1; i++) ymax = Math.max(ymax, sp.mean[i] + sp.sd[i]);
+  const ylo = Math.max(ymax * 1e-4, 1e-4), Y = v => H - pad.b - (Math.log10(Math.max(v, ylo)) - Math.log10(ylo)) / (Math.log10(ymax * 1.3) - Math.log10(ylo)) * (H - pad.t - pad.b);
+  c.clearRect(0, 0, W, H);
+  if (!opts.axes) rows.forEach(r => { if (r.linear && r.n_feat > 1) { c.fillStyle = rgba('--s1', 0.9); c.fillRect(X(r.lo), H - 6, Math.max(1.5, X(r.hi) - X(r.lo)), 5); } });
+  if (opts.axes) rows.forEach(r => { const [v, a] = secColor(r); c.fillStyle = rgba(v, a); c.fillRect(X(r.lo), pad.t, Math.max(1, X(r.hi) - X(r.lo)), H - pad.t - pad.b);
+    c.strokeStyle = rgba('--fg-3', 0.5); c.lineWidth = 1; c.beginPath(); c.moveTo(X(r.lo), pad.t); c.lineTo(X(r.lo), H - pad.b); c.stroke(); });
+  if (opts.axes) { c.fillStyle = rgba('--fg-3', 0.18); c.beginPath();
+    for (let i = i0; i < i1; i++) c.lineTo(X(sp.wav[i]), Y(sp.mean[i] + sp.sd[i]));
+    for (let i = i1 - 1; i >= i0; i--) c.lineTo(X(sp.wav[i]), Y(sp.mean[i] - sp.sd[i])); c.fill(); }
+  c.strokeStyle = tok('--fg'); c.lineWidth = opts.axes ? 1.2 : 0.8; c.beginPath();
+  for (let i = i0; i < i1; i++) { const x = X(sp.wav[i]), y = Y(sp.mean[i]); i === i0 ? c.moveTo(x, y) : c.lineTo(x, y); } c.stroke();
+  if (opts.window) { c.strokeStyle = tok('--s2'); c.lineWidth = 2; c.strokeRect(X(opts.window[0]), 2, X(opts.window[1]) - X(opts.window[0]), H - 4); }
+  if (opts.axes) { c.fillStyle = tok('--fg-2'); c.font = '11px ' + tok('--sans'); c.textAlign = 'center';
+    const step = (hi - lo) > 12 ? 2 : 1; for (let w = Math.ceil(lo / step) * step; w <= hi; w += step) c.fillText(w.toFixed(0), X(w), H - 8);
+    c.save(); c.translate(12, (pad.t + H - pad.b) / 2); c.rotate(-Math.PI / 2); c.fillText('mean sky (log)', 0, 0); c.restore(); }
+  return { X, rows, lo, hi, pad, W };
+}
+let secGeo = null;
+function renderSections() {
+  const sp = SEC.spec[secState.arm], half = secState.arm === 'm' ? 5 : 8;
+  if (secState.centre == null) { const m = SROWS[secState.th].filter(r => r.arm === secState.arm && r.linear).sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo))[0]; secState.centre = m ? (m.lo + m.hi) / 2 : (sp.wav[0] + sp.wav.at(-1)) / 2; }
+  const lo = Math.max(sp.wav[0], secState.centre - half), hi = Math.min(sp.wav.at(-1), lo + 2 * half);
+  drawSpec($('#secOver'), sp.wav[0], sp.wav.at(-1), { axes: false, window: [lo, hi] });
+  secGeo = drawSpec($('#secDetail'), lo, hi, { axes: true });
+  $('#secDetailTitle').textContent = `${secState.arm} arm, ${lo.toFixed(1)}–${hi.toFixed(1)} nm, tolerance ${secState.th}%`;
+  $('#secLegend').innerHTML = `<span><span class="sw" style="background:${rgba('--s1', 0.42)}"></span>linear, 2+ features</span><span><span class="sw" style="background:${rgba('--s1', 0.13)}"></span>linear, one feature</span><span><span class="sw" style="background:${rgba('--bad', 0.16)}"></span>not linear at this tolerance</span>`;
+  const multi = $('#secMulti').checked, L = SROWS[secState.th].filter(r => r.arm === secState.arm && r.linear && (!multi || r.n_feat > 1)).sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo));
+  $('#secCount').textContent = `${L.length} sections`;
+  const tb = $('#secList tbody'); tb.innerHTML = '';
+  L.forEach(r => { const tr = el('tr', {}, `<td class="n">${r.lo.toFixed(2)}–${r.hi.toFixed(2)}</td><td class="n">${(r.hi - r.lo).toFixed(2)}</td><td class="n">${r.n_feat}</td><td>${r.mostly || '–'}</td><td class="n">${pct(r.E_worst, 2)}</td><td>${r.E_prop <= Number(secState.th) / 100 ? 'proportional' : 'with intercept'}</td><td class="n">${r.family_n > 1 ? r.family_n : '–'}</td><td class="mono" style="font-size:11px">${r.driver1}</td>`);
+    tr.style.cursor = 'pointer'; tr.onclick = () => { secState.centre = (r.lo + r.hi) / 2; renderSections(); $('#secDetail').scrollIntoView({ behavior: 'smooth', block: 'center' }); }; tb.append(tr); });
+  secSummary();
+}
+$('#secOver').addEventListener('click', e => { const sp = SEC.spec[secState.arm], r = e.currentTarget.getBoundingClientRect(); secState.centre = sp.wav[0] + (e.clientX - r.left) / r.width * (sp.wav.at(-1) - sp.wav[0]); renderSections(); });
+$('#secDetail').addEventListener('pointermove', e => { if (!secGeo) return; const r = e.currentTarget.getBoundingClientRect(), x = e.clientX - r.left;
+  const w = secGeo.lo + (x - secGeo.pad.l) / (secGeo.W - secGeo.pad.l - secGeo.pad.r) * (secGeo.hi - secGeo.lo), s = secGeo.rows.find(q => w >= q.lo && w <= q.hi);
+  if (!s) { hideTip(); return; }
+  showTip(`<b>${s.lo.toFixed(2)}–${s.hi.toFixed(2)} nm</b> (${(s.hi - s.lo).toFixed(2)} nm, ${s.n_feat} feature${s.n_feat > 1 ? 's' : ''}, ${s.n_lines} robust lines)<br>${s.linear ? 'linear' : '<b>not linear</b>'} at ${secState.th}%: worst feature <span class="v">${pct(s.E_worst, 2)}</span>, whole section ${pct(s.E_affine, 2)}, proportional ${pct(s.E_prop, 2)}<br><span class="muted">mostly ${s.mostly || '–'}${s.mostly_frac ? ' (' + pct(s.mostly_frac, 0) + ')' : ''} · ${s.driver1}, ${s.driver2}${s.family_n > 1 ? ' · family of ' + s.family_n : ''}</span>`, e.clientX, e.clientY); });
+$('#secDetail').addEventListener('pointerleave', hideTip);
+$('#secMulti').addEventListener('change', renderSections);
+function seg2(id, key, fn) { const s = $(id); s.querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.v === secState[key]);
+  b.onclick = () => { secState[key] = b.dataset.v; if (key === 'arm') secState.centre = null; s.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); fn(); }; }); }
+seg2('#segTh', 'th', () => { renderSections(); renderFam(); }); seg2('#segArm', 'arm', renderSections);
+const famM = new Mat(el('div'), { n: 1, kind: 'seq', get: (i, j) => famMats[secState.th].M[i * famMats[secState.th].n + j] });
+$('#famBox').replaceWith(famM.box); famM.box.className = 'mbox'; famM.box.id = 'famBox';
+const secLab = r => `<span class="mono">${r.arm} ${r.lo.toFixed(2)}–${r.hi.toFixed(2)}</span> ${r.mostly || ''}`;
+function renderFam() { const f = famMats[secState.th]; famM.n = f.n; famM.render([...Array(f.n).keys()]); }
+famM.listeners.push((t, c, e) => {
+  const f = famMats[secState.th], rows = SROWS[secState.th];
+  if (t === 'leave') { hideTip(); famM.cross(null); return; }
+  const a = rows[f.order[famM.idx[c.row]]], b = rows[f.order[famM.idx[c.col]]];
+  if (t === 'move') { famM.cross(c); showTip(`${secLab(a)}<br>${secLab(b)}<br>off a straight line by <span class="v">${c.row === c.col ? '0' : pct(decS(f.M[famM.idx[c.row] * f.n + famM.idx[c.col]]), 2)}</span>${a.family === b.family && a.family >= 0 ? ' · same family' : ''}`, e.clientX, e.clientY); }
+  if (t === 'click') { const mem = rows.filter(r => r.linear && r.family === a.family).sort((x, y) => x.lo - y.lo);
+    $('#famDetails').innerHTML = `<b>Family ${a.family}</b> <span class="muted">${mem.length} section${mem.length > 1 ? 's' : ''} at ${secState.th}%</span><div class="rowl">${mem.map(r => `<span class="arm">${r.arm}</span><span>${r.lo.toFixed(2)}–${r.hi.toFixed(2)} ${r.mostly || ''}</span><span>${r.n_feat} feat.</span>`).join('')}</div>`; }
+});
+ramp($('#rampF'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Off a straight line');
+
 // ---------- draw everything ----------
-function drawAll() { drawRamps(); big.render(big.idx.length ? null : armIdx()); drawStrip(); renderLR(); mMats.forEach(M => M.render(M.idx.length ? null : [...Array(nM).keys()])); binChart(); contrastChart(); rnChart(); }
+function drawAll() { drawRamps(); ramp($('#rampF'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Off a straight line'); big.render(big.idx.length ? null : armIdx()); drawStrip(); renderLR(); mMats.forEach(M => M.render(M.idx.length ? null : [...Array(nM).keys()])); binChart(); contrastChart(); rnChart(); renderSections(); renderFam(); }
 drawAll(); renderGroups();
 const retheme = () => { refreshLuts(); drawAll(); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
 new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { big.render(); lrMats.forEach(M => M.render()); mMats.forEach(M => M.render()); drawStrip(); }, 150); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { big.render(); lrMats.forEach(M => M.render()); mMats.forEach(M => M.render()); drawStrip(); renderSections(); famM.render(); }, 150); });
 })();
 </script>
