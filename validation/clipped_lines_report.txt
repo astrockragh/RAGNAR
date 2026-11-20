@@ -1,0 +1,106 @@
+# Line lists on the real PFS sky, line by line
+
+## b arm: real-data bias per line (median over fibres of the unclipped residual, lines measured in >= 50% of fibres), pm
+  simple (merge 2.355 sigma)  : lines   12, rms bias   4.54, median |bias|  1.50, 90th pct |bias|   4.08, lines with |bias| > 10 pm: 1
+  simple (merge 1 sigma)      : lines   20, rms bias  36.21, median |bias|  3.84, 90th pct |bias|  71.04, lines with |bias| > 10 pm: 7
+  RAGNAR cent=0, all          : lines   16, rms bias  12.73, median |bias|  2.20, 90th pct |bias|  14.09, lines with |bias| > 10 pm: 2
+  RAGNAR cent=0, robust       : lines   15, rms bias   6.00, median |bias|  1.89, 90th pct |bias|   6.33, lines with |bias| > 10 pm: 1
+  RAGNAR cent=1, all          : lines   15, rms bias   1.94, median |bias|  1.35, 90th pct |bias|   3.28, lines with |bias| > 10 pm: 0
+  RAGNAR cent=1, robust       : lines   15, rms bias   1.94, median |bias|  1.35, 90th pct |bias|   3.28, lines with |bias| > 10 pm: 0
+
+## b arm, RAGNAR cent=1, robust: 15 lines measured in >= 50% of fibres, 0 clipped in more than half of those
+   what goes with clipping (lines clipped in > 50% of fibres / lines in the group):
+     line-specific absorption, t/envelope < 0.97: 0/0 clipped | unabsorbed: 0/15 clipped
+     dominant subline E_rot > 1000 cm-1 (hot population): 0/0 clipped | below: 0/10 clipped
+     nearest list line < 3 sigma: 0/0 clipped | >= 3 sigma: 0/15 clipped
+     not clean (several upper levels): 0/5 clipped | clean: 0/10 clipped
+     dominant subline < 60% of the line: 0/10 clipped | >= 60%: 0/5 clipped
+     median S/N < 30: 0/10 clipped | >= 30: 0/5 clipped
+     spread between spectrographs > 10 pm: 0/0 clipped | <= 10 pm: 0/15 clipped
+
+## r arm: real-data bias per line (median over fibres of the unclipped residual, lines measured in >= 50% of fibres), pm
+  simple (merge 2.355 sigma)  : lines  108, rms bias  35.35, median |bias|  8.52, 90th pct |bias|  72.25, lines with |bias| > 10 pm: 52
+  simple (merge 1 sigma)      : lines  238, rms bias  44.84, median |bias|  5.29, 90th pct |bias|  89.24, lines with |bias| > 10 pm: 104
+  RAGNAR cent=0, all          : lines  187, rms bias  22.97, median |bias|  2.36, 90th pct |bias|  26.51, lines with |bias| > 10 pm: 43
+  RAGNAR cent=0, robust       : lines  174, rms bias   9.80, median |bias|  2.02, 90th pct |bias|  14.20, lines with |bias| > 10 pm: 30
+  RAGNAR cent=1, all          : lines  176, rms bias  10.50, median |bias|  1.52, 90th pct |bias|  10.60, lines with |bias| > 10 pm: 21
+  RAGNAR cent=1, robust       : lines  170, rms bias   5.95, median |bias|  1.48, 90th pct |bias|   8.75, lines with |bias| > 10 pm: 16
+
+## r arm, RAGNAR cent=1, robust: 170 lines measured in >= 50% of fibres, 16 clipped in more than half of those
+   what goes with clipping (lines clipped in > 50% of fibres / lines in the group):
+     line-specific absorption, t/envelope < 0.97: 2/7 clipped | unabsorbed: 14/163 clipped
+     dominant subline E_rot > 1000 cm-1 (hot population): 5/10 clipped | below: 9/150 clipped
+     nearest list line < 3 sigma: 1/2 clipped | >= 3 sigma: 15/168 clipped
+     not clean (several upper levels): 13/82 clipped | clean: 3/88 clipped
+     dominant subline < 60% of the line: 13/162 clipped | >= 60%: 3/8 clipped
+     median S/N < 30: 14/61 clipped | >= 30: 2/109 clipped
+     spread between spectrographs > 10 pm: 2/2 clipped | <= 10 pm: 14/168 clipped
+   clipped robust lines (bias, scatter, sm_spread, sigma_wav in pm):
+  wav  bias  scatter  clip_frac   snr  t_rel       dom_label  dom_Erot  dom_frac  number_of_lines  clean  nearest_list_line_sigma  sm_spread  sigma_wav                                                        label
+765.5 -15.3    8.141      0.720  15.4  0.908  (4-0)pP2f(4.5)     383.8     0.505                2   True                    8.085      3.444      0.280                                (4-0)pP2e(4.5)|(4-0)pP2f(4.5)
+770.2 -19.8    9.036      0.886  16.8  1.000  (4-0)pP1f(6.5)     465.6     0.486                4  False                    7.024      2.141      0.370 (4-0)pQ12f(4.5)|(4-0)pQ12e(4.5)|(4-0)pP1f(6.5)|(4-0)pP1e(6.5
+771.5 -11.8    4.930      0.627  89.7  1.000  (9-4)rR1e(2.5)     135.4     0.312                6  False                    3.328       10.6      3.693 (9-4)rR2f(2.5)|(9-4)rR2e(2.5)|(9-4)rR1e(2.5)|(9-4)rR1f(2.5)|
+814.1 -10.1    9.036      0.564  13.8  1.000  (5-1)pP2e(6.5)     691.2     0.339                6  False                    5.857      3.098       11.1 (9-4)pP2e(9.5)|(9-4)pP2f(9.5)|(5-1)pP2e(6.5)|(5-1)pP2f(6.5)|
+832.0  15.2     13.4      0.657  10.0  0.960  (6-2)rR1e(9.5)    1565.0     0.272                4  False                    6.594      3.076      0.373  (6-2)rR1f(9.5)|(6-2)rR1e(9.5)|(6-2)rR2f(8.5)|(6-2)rR2e(8.5)
+863.0  33.1     13.0      0.960  15.8  1.000            None       NaN     0.645                3   True                    2.129      1.482       22.0           O2_b^1_Sigma^+_g|O2_b^1_Sigma^+_g|O2_b^1_Sigma^+_g
+865.3 -18.1    8.449      0.801  25.0  1.000            None       NaN     0.619                4  False                    3.967      3.507      8.090 (6-2)pP1f(8.5)|(6-2)pP1e(8.5)|O2_b^1_Sigma^+_g|O2_b^1_Sigma^
+881.2  12.1    7.194      0.628  22.5  1.000  (7-3)rR1e(9.5)    1488.2     0.283                4  False                    7.201      2.224      0.396  (7-3)rR1f(9.5)|(7-3)rR1e(9.5)|(7-3)rR2e(8.5)|(7-3)rR2f(8.5)
+897.4 -15.8    8.189      0.765  15.0  0.995 (7-3)pQ12e(1.5)     0.028     0.479                4  False                    9.127      1.562      0.280 (4-0)pP2e(22.5)|(7-3)pQ12f(1.5)|(7-3)pQ12e(1.5)|(4-0)pP1e(23
+906.8 -13.2     16.9      0.678  10.0  1.000 (6-2)pP2e(13.5)    2604.6     0.573                3  False                    3.647       11.8      1.870              (7-3)qQ1e(10.5)|(6-2)pP2e(13.5)|(6-2)pP2f(13.5)
+907.2 -13.6     17.5      0.663  12.7  0.986 (6-2)pP1e(14.5)    2564.3     0.611                2   True                    3.647      6.327      2.215                              (6-2)pP1f(14.5)|(6-2)pP1e(14.5)
+925.3 8.882     16.7      0.598  15.7  1.000 (6-2)pP2e(15.5)    3392.9     0.344                7  False                    8.454      2.861      1.150 (6-2)pP1e(16.5)|(5-1)pP2e(20.5)|(5-1)pP1e(21.5)|(8-4)rQ21e(5
+926.5 7.610     13.1      0.530  12.5  0.999 (8-4)qP21e(1.5)     130.5     0.498                3  False                     11.1      4.756      0.488              (7-3)pQ12e(8.5)|(8-4)qP21e(1.5)|(8-4)qP21f(1.5)
+931.0 -18.4    4.560      0.987 119.4  0.996  (8-4)rR1e(3.5)     251.6     0.367                8  False                    5.124      1.733      5.204 (8-4)rR1f(5.5)|(8-4)rR1e(5.5)|(8-4)rR2f(3.5)|(8-4)rR2e(3.5)|
+945.1  23.9    9.369      0.972  21.3  1.000  (8-4)qQ1f(5.5)     384.1     0.421                4  False                    7.457      2.015       11.3 (7-3)pP1f(12.5)|(7-3)pP1e(12.5)|(8-4)qQ1f(5.5)|(8-4)qQ1e(5.5
+953.9 -10.5    9.369      0.520  22.4  0.998 (8-4)pQ12e(1.5)     0.024     0.345                4  False                    6.251      4.564      7.333 (8-4)pQ12f(1.5)|(8-4)pQ12e(1.5)|(7-3)pP1f(13.5)|(7-3)pP1e(13
+
+## n arm: real-data bias per line (median over fibres of the unclipped residual, lines measured in >= 50% of fibres), pm
+  simple (merge 2.355 sigma)  : lines  137, rms bias  33.58, median |bias|  6.45, 90th pct |bias|  66.76, lines with |bias| > 10 pm: 60
+  simple (merge 1 sigma)      : lines  274, rms bias  46.42, median |bias|  7.37, 90th pct |bias|  88.87, lines with |bias| > 10 pm: 126
+  RAGNAR cent=0, all          : lines  211, rms bias  25.49, median |bias|  1.71, 90th pct |bias|  54.85, lines with |bias| > 10 pm: 58
+  RAGNAR cent=0, robust       : lines  190, rms bias  16.52, median |bias|  1.27, 90th pct |bias|  17.99, lines with |bias| > 10 pm: 38
+  RAGNAR cent=1, all          : lines  190, rms bias  12.40, median |bias|  1.26, 90th pct |bias|  13.99, lines with |bias| > 10 pm: 31
+  RAGNAR cent=1, robust       : lines  177, rms bias   7.24, median |bias|  1.01, 90th pct |bias|  11.03, lines with |bias| > 10 pm: 22
+
+## n arm, RAGNAR cent=1, robust: 177 lines measured in >= 50% of fibres, 31 clipped in more than half of those
+   what goes with clipping (lines clipped in > 50% of fibres / lines in the group):
+     line-specific absorption, t/envelope < 0.97: 0/10 clipped | unabsorbed: 31/167 clipped
+     dominant subline E_rot > 1000 cm-1 (hot population): 17/23 clipped | below: 14/149 clipped
+     nearest list line < 3 sigma: 2/2 clipped | >= 3 sigma: 29/175 clipped
+     not clean (several upper levels): 20/71 clipped | clean: 11/106 clipped
+     dominant subline < 60% of the line: 31/172 clipped | >= 60%: 0/5 clipped
+     median S/N < 30: 18/29 clipped | >= 30: 13/148 clipped
+     spread between spectrographs > 10 pm: 0/0 clipped | <= 10 pm: 31/177 clipped
+   clipped robust lines (bias, scatter, sm_spread, sigma_wav in pm):
+   wav   bias  scatter  clip_frac   snr  t_rel       dom_label  dom_Erot  dom_frac  number_of_lines  clean  nearest_list_line_sigma  sm_spread  sigma_wav                                                        label
+ 983.1  8.035    7.568      0.598  18.6  1.000  (3-0)qQ1e(4.5)     317.3     0.447                5  False                     10.4      1.575      5.767 (7-3)pP2e(15.5)|(3-0)qQ1f(4.5)|(7-3)pP2f(15.5)|(3-0)qQ1e(4.5
+ 998.1  9.974    5.752      0.716  31.9  1.000 (8-4)pP1e(11.5)    1408.7     0.333                8  False                    5.839      2.527      4.812 (8-4)pP1f(11.5)|(9-5)qP21f(4.5)|(9-5)qP21e(4.5)|(8-4)pP1e(11
+1007.3   11.4    4.073      0.793  62.2  1.000  (3-0)pP1e(6.5)     484.2     0.451                7  False                    2.627      0.749       15.8 (8-4)pP1f(12.5)|(7-3)pP1f(18.5)|(3-0)pP1f(6.5)|(9-5)rR1f(10.
+1014.7  -18.4    7.157      0.909  17.3  1.000  (4-1)rR1e(6.5)     875.8     0.172               13  False                    2.757      4.622      6.676 (4-1)rR1f(8.5)|(4-1)rR2f(5.5)|(4-1)rR2e(5.5)|(4-1)rR2f(6.5)|
+1050.2  -12.9    7.132      0.779  16.1  1.000  (9-5)pP2e(8.5)     931.4     0.500                2   True                    9.972      3.037      0.341                                (9-5)pP2e(8.5)|(9-5)pP2f(8.5)
+1055.5   11.0    7.533      0.728  17.7  1.000 (4-1)pQ12e(3.5)     173.4     0.507                2   True                    6.182      1.212      0.263                              (4-1)pQ12f(3.5)|(4-1)pQ12e(3.5)
+1066.9  2.416    9.635      0.508  10.2  1.000 (4-1)oP12e(3.5)      71.9     0.506                2   True                    9.307      3.500      0.310                              (4-1)oP12f(3.5)|(4-1)oP12e(3.5)
+1069.1   13.8    5.290      0.855  44.8  0.999  (5-2)rR1f(5.5)     628.7     0.387               10  False                    8.983      0.879      9.402 (5-2)rR1e(8.5)|(5-2)rR1f(8.5)|(5-2)rR1e(5.5)|(5-2)rR1f(5.5)|
+1080.5  -22.8    6.898      0.965  20.0  1.000  (4-1)pP1f(9.5)    1128.4     0.451                5  False                    7.819      1.735       12.3 (7-3)pP2f(22.5)|(4-1)pP1f(9.5)|(4-1)rR1f(23.5)|(9-5)pP1e(12.
+1088.7  -11.1    9.240      0.695  19.8  1.000 (4-1)pP1f(10.5)    1408.7     0.501                2   True                    7.861      1.712      0.350                              (4-1)pP1f(10.5)|(4-1)pP1e(10.5)
+1104.1  -13.4     14.3      0.732  12.5  0.999 (3-0)pP2e(16.5)    4380.0     0.227                7  False                     11.1      4.365      8.580 (5-2)rR1f(18.5)|(9-5)pP1e(14.5)|(3-0)pP1e(17.5)|(5-2)rR1e(18
+1106.4  -13.6    9.290      0.794  10.6  0.999 (4-1)pP2e(11.5)    2095.0     0.506                2   True                    7.652      3.053      0.513                              (4-1)pP2e(11.5)|(4-1)pP2f(11.5)
+1121.5   11.1    7.381      0.773  39.7  0.981  (5-2)pP2e(6.5)     691.2     0.500                4  False                     12.6      4.739      2.702 (5-2)pP2e(6.5)|(5-2)pP2f(6.5)|(6-3)rQ21f(1.5)|(6-3)rQ21e(1.5
+1127.3  -31.9    9.337      0.995  19.9  0.990 (4-1)pP2f(13.5)    2848.9     0.345                4  False                    5.846      4.661       11.8 (4-1)pP2e(13.5)|(6-3)qP21e(1.5)|(6-3)qP21f(1.5)|(4-1)pP2f(13
+1148.0  -21.8    5.780      0.982  36.9  0.998 (5-2)pP1f(10.5)    1347.7     0.526                2   True                    3.422      1.746      2.402                              (5-2)pP1f(10.5)|(5-2)pP1e(10.5)
+1157.7  -23.5     11.0      0.967  48.0  0.995 (5-2)pP1f(11.5)    1643.6     0.311                8  False                     11.2      3.423      2.763 (6-3)rR1f(16.5)|(3-0)pP2e(20.5)|(5-2)pP1f(11.5)|(3-0)pP1e(21
+1167.3  3.186     10.7      0.527  23.0  0.998 (5-2)pP2e(11.5)    2006.3     0.516                2   True                    9.315      2.998      2.116                              (5-2)pP2e(11.5)|(5-2)pP2f(11.5)
+1168.3  8.188    9.550      0.557  52.5  0.999 (6-3)pQ12e(1.5)     0.032     0.410                3  False                    5.625      5.711       17.0              (6-3)pQ12f(1.5)|(6-3)pQ12e(1.5)|(5-2)pP1f(12.5)
+1180.6   10.2     15.7      0.659  15.9  0.999 (6-3)oP12f(2.5)     0.032     0.500                2   True                    3.780      4.798      1.747                              (6-3)oP12f(2.5)|(6-3)oP12e(2.5)
+1181.0 -0.397     12.7      0.591  13.6  0.999 (6-3)pQ12e(4.5)     278.9     0.507                3  False                    3.780      1.226      2.865              (6-3)pQ12f(4.5)|(6-3)qQ1f(11.5)|(6-3)pQ12e(4.5)
+1188.7   10.5     13.4      0.643  18.1  1.000 (6-3)oP12e(3.5)      65.9     0.445                3  False                    7.572      3.139      5.168              (3-0)pP2f(22.5)|(6-3)oP12f(3.5)|(6-3)oP12e(3.5)
+1190.1  -34.6    8.212      0.991  11.7  0.999 (5-2)pP2e(13.5)    2729.1     0.511                2   True                    5.539      2.287      0.371                              (5-2)pP2e(13.5)|(5-2)pP2f(13.5)
+1197.5  -18.3     18.2      0.544 122.8  0.999  (7-4)rR1f(4.5)     405.7     0.426                8  False                    6.098      9.478      8.678 (7-4)rR1e(4.5)|(7-4)rR1f(4.5)|(7-4)rR2f(6.5)|(7-4)rR2e(6.5)|
+1204.4 -7.363    4.071      0.555  51.4  0.994  (6-3)pP1e(9.5)    1028.7     0.522                2   True                     11.6      1.931      0.369                                (6-3)pP1f(9.5)|(6-3)pP1e(9.5)
+1214.3 -9.305    6.309      0.671  18.4  0.999 (6-3)pP1e(10.5)    1283.6     0.377                6  False                    5.562      0.767      3.584 (6-3)pP1f(10.5)|(7-4)rR1f(13.5)|(7-4)rR1e(13.5)|(6-3)pP1e(10
+1224.0  -23.6    7.944      0.967  39.5  1.000 (6-3)pP2e(10.5)    1611.8     0.498                3  False                    9.361      0.851      1.599              (6-3)pP2e(10.5)|(6-3)pP2f(10.5)|(3-0)pP1e(25.5)
+1225.0  -19.1    7.084      0.940  38.6  1.000 (6-3)pP1f(11.5)    1568.1     0.473                3  False                    7.748      2.759      2.765               (6-3)pP1f(11.5)|(7-4)qQ1f(6.5)|(6-3)pP1e(11.5)
+1229.8 -2.568     11.4      0.550  20.3  1.000 (5-2)pP2f(16.5)    4005.5     0.445                5  False                    4.367      3.724       17.3 (7-4)qR12e(3.5)|(5-2)pP2f(16.5)|(7-4)qR12f(3.5)|(7-4)qR12f(1
+1231.5  -10.1    3.841      0.763  34.9  1.000 (7-4)qR12e(0.5)     0.000     0.496                3  False                    6.632      0.732      0.534              (6-3)rR2f(23.5)|(7-4)qR12f(0.5)|(7-4)qR12e(0.5)
+1236.3  -23.8    8.065      0.962  38.1  1.000 (6-3)pP1e(12.5)    1872.5     0.529                2   True                     10.3      5.652      0.995                              (6-3)pP1f(12.5)|(6-3)pP1e(12.5)
+1245.2   29.9    8.231      0.993  14.4  1.000 (5-2)pP1e(18.5)    4451.9     0.505                3  False                    4.897      1.376      2.869               (5-2)pP1e(18.5)|(5-2)pP2e(17.5)|O2_a^1_Delta_g

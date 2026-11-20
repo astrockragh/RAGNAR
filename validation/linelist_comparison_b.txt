@@ -1,0 +1,27 @@
+# Line lists for wavelength calibration, b arm (420-645 nm, sigma 0.088 nm)
+Simple lists: lines merged closer than the given multiple of sigma, intensity cut 0.001 x brightest. Centroids: Gaussian-weighted, S/N > 10.
+Per-fibre correction: Legendre degree 2, 3-sigma clipped. Residuals in pm.
+
+## Test 1: PFS sky fibres (median over fibres)
+                      list  lines_in_list  n_used  frac_clipped  rms_fit_pm  rms_noclip_pm  rms_cv_pm  rms_line_pm  lines_used_in_half_the_fibres
+simple (merge 2.355 sigma)             48   11.00          0.09        4.07           8.85       6.41         3.49                             12
+    simple (merge 1 sigma)             60   14.00          0.31        5.16          35.10       7.28         2.74                             13
+        RAGNAR cent=0, all            389   14.00          0.11        4.82          12.71       6.79         2.68                             14
+     RAGNAR cent=0, robust            327   14.00          0.06        4.79           7.79       6.69         2.63                             14
+        RAGNAR cent=1, all            302   14.00          0.00        4.67           6.74       6.45         1.81                             14
+     RAGNAR cent=1, robust            261   14.00          0.00        4.67           6.74       6.42         1.81                             14
+
+## Solution differences against "RAGNAR cent=1, robust" (rms over the range both lists cover with used lines, median over fibres, pm)
+  simple (merge 2.355 sigma): 2.96 (84th percentile 5.26)
+  simple (merge 1 sigma): 2.13 (84th percentile 4.36)
+  RAGNAR cent=0, all: 1.54 (84th percentile 3.25)
+  RAGNAR cent=0, robust: 1.69 (84th percentile 3.77)
+  RAGNAR cent=1, all: 0.00 (84th percentile 0.00)
+
+## Test 2: simulated spectra (sweep_0_0.088_b_fix3_20261007.pkl; favours RAGNAR, whose lists were derived from them). pm
+  simple (merge 2.355 sigma): lines 48, rms bias 22.37, median |bias| 3.19, 90th pct |bias| 33.36, median scatter over conditions 0.44
+  simple (merge 1 sigma): lines 60, rms bias 26.61, median |bias| 1.68, 90th pct |bias| 43.20, median scatter over conditions 0.48
+  RAGNAR cent=0, all: lines 389, rms bias 19.93, median |bias| 1.37, 90th pct |bias| 32.72, median scatter over conditions 0.71
+  RAGNAR cent=0, robust: lines 327, rms bias 16.65, median |bias| 1.53, 90th pct |bias| 24.09, median scatter over conditions 0.73
+  RAGNAR cent=1, all: lines 302, rms bias 5.71, median |bias| 0.61, 90th pct |bias| 5.65, median scatter over conditions 0.85
+  RAGNAR cent=1, robust: lines 261, rms bias 2.31, median |bias| 0.59, 90th pct |bias| 4.08, median scatter over conditions 0.71

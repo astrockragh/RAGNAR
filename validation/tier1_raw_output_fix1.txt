@@ -1,0 +1,49 @@
+# Tier 1 validation of RAGNAR simulated spectra
+Run 2026-10-05 17:29
+
+## 1. Flux bookkeeping
+  b arm, Trot 180 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99978
+  b arm, Trot 180 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99975
+  b arm, Trot 210 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99979
+  b arm, Trot 210 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99974
+  r arm, Trot 180 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 1.00000
+  r arm, Trot 180 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 1.00000
+  r arm, Trot 210 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 1.00000
+  r arm, Trot 210 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 1.00000
+  n arm, Trot 180 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99997
+  n arm, Trot 180 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99997
+  n arm, Trot 210 K, Tvib 8000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99997
+  n arm, Trot 210 K, Tvib 12000 K: integral / analytic expectation = 1.000000, integral / sum of line intensities = 0.99997
+
+## 2. Temperature round trip (r arm, saved spectra sweep_0_0.108_r_fix1_20261005.pkl)
+  14 isolated, unabsorbed low-J OH Lambda-doublets used, upper levels v' = [np.int64(3), np.int64(5), np.int64(6), np.int64(7), np.int64(8)]
+  input Trot 180 K, Tvib 8000 K | Trot from spectrum 191.23 K, from model intensities 190.80 K | Tvib from spectrum 7676 K, from model intensities 7691 K
+  input Trot 180 K, Tvib 12000 K | Trot from spectrum 190.34 K, from model intensities 190.10 K | Tvib from spectrum 11311 K, from model intensities 11343 K
+  input Trot 210 K, Tvib 8000 K | Trot from spectrum 219.99 K, from model intensities 219.47 K | Tvib from spectrum 7775 K, from model intensities 7793 K
+  input Trot 210 K, Tvib 12000 K | Trot from spectrum 219.15 K, from model intensities 218.90 K | Tvib from spectrum 11515 K, from model intensities 11554 K
+  Model diagnostic, Trot fitted from line intensities (the hot population raises a single-temperature fit, so "model as is" is expected above the input):
+    input 180 K / 8000 K: model as is 190.80 K, hot population off 180.00 K
+    input 180 K / 12000 K: model as is 190.10 K, hot population off 180.00 K
+    input 210 K / 8000 K: model as is 219.47 K, hot population off 210.00 K
+    input 210 K / 12000 K: model as is 218.90 K, hot population off 210.00 K
+
+## 3. Wavelength convention (atomic lines)
+  OI(1S_0-1D_2)   RAGNAR 557.8887 nm, NIST air 557.7339 nm -> vacuum 557.8888 nm, difference -0.08 pm (air would be +155 pm)
+  NaI(D2)         RAGNAR 589.1583 nm, NIST air 588.9951 nm -> vacuum 589.1583 nm, difference -0.02 pm (air would be +163 pm)
+  NaI(D1)         RAGNAR 589.7558 nm, NIST air 589.5924 nm -> vacuum 589.7558 nm, difference -0.01 pm (air would be +163 pm)
+  OI(1D_2-3P_2)   RAGNAR 630.2046 nm, NIST air 630.0304 nm -> vacuum 630.2046 nm, difference -0.03 pm (air would be +174 pm)
+  OI(1D_2-3P_1)   RAGNAR 636.5536 nm, NIST air 636.3776 nm -> vacuum 636.5536 nm, difference +0.05 pm (air would be +176 pm)
+  H_alpha         RAGNAR 656.4614 nm, NIST air 656.2790 nm -> vacuum 656.4603 nm, difference +1.10 pm (air would be +182 pm)
+  H_beta          RAGNAR 486.2721 nm, NIST air 486.1350 nm -> vacuum 486.2708 nm, difference +1.30 pm (air would be +137 pm)
+
+## 4. Transmission (r arm, PWV 3 mm vs 0 mm)
+  clean, 820-890 nm     :   8 lines, median t(3mm)/t(0mm) = 1.000 (MODTRAN direct), spectrum peak ratio - MODTRAN: median -0.0000, max |.| 0.0000
+  H2O band, 920-980 nm  :  12 lines, median t(3mm)/t(0mm) = 0.992 (MODTRAN direct), spectrum peak ratio - MODTRAN: median -0.0000, max |.| 0.0004
+  all r arm             :  63 lines, median t(3mm)/t(0mm) = 1.000 (MODTRAN direct), spectrum peak ratio - MODTRAN: median -0.0000, max |.| 0.0040
+
+## 5. Line width (r arm)
+  LSF scatter 0: input width factor 0.9730, fitted 0.9729 (1 isolated doublets)
+  LSF scatter 1: input width factor 1.0000, fitted 0.9999 (1 isolated doublets)
+  LSF scatter 2: input width factor 1.0270, fitted 1.0269 (1 isolated doublets)
+
+(total 54 s)

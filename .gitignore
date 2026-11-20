@@ -2,8 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
-lineLists
-lineLists/
+# line lists: only the delivered lists are tracked (CSV); the test runs and the PKL copies stay on disk
+lineLists/*
+!lineLists/sweep_0.088_1_b_fix4_20261007.csv
+!lineLists/sweep_0.112_1_r_fix4_20261007.csv
+!lineLists/sweep_0.105_1_n_fix4_20261007.csv
+!lineLists/sweep_0.0637_1_m_fix4_691-908nm_20261116.csv
+!lineLists/sweep_unified_1_fix4_20261007.csv
+!lineLists/sedm_*.csv
 .DS_store
 
 #egg file and pycaches
@@ -112,3 +118,16 @@ ENV/
 # IDE settings
 .vscode/
 .idea/
+
+# analysis outputs: scripts, reports and small tables are tracked, bulky products stay on disk
+.backup_20261005/
+slurm_logs/
+logs/
+*.npz
+*.pkl
+*.fits
+validation/linelist_comparison_*_lines.csv
+validation/tier2/line_level_fix*.csv
+pfs_mr/out/stack_points.csv
+sedm/out/mocks.csv
+sedm/out/feature_mocks.csv

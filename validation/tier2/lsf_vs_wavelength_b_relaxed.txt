@@ -1,0 +1,8 @@
+# Line spread vs wavelength within each arm (pfsMerged stacks, per-line sigma with the blend structure fixed; own flux >= 0.75, S/N >= 20.0)
+
+## b arm: 12 lines, 589-639 nm, spectrographs [np.int64(1), np.int64(2), np.int64(3), np.int64(4)]
+  sigma at 614 nm, per spectrograph: SM1 0.0963, SM2 0.0961, SM3 0.0960, SM4 0.0959 nm
+  linear slope +0.0923 +- 0.0073 pm/nm (+12.7 sigma): sigma changes by +4.8% across the measured range
+  for constant resolving power it would be +0.1565 pm/nm (+8.1%); measured / constant-R slope = 0.59
+  quadratic term +0.001064 pm/nm^2; scatter of lines about the linear fit 2.77 pm (2.9% of sigma), rms reduction from the quadratic term 0.1%
+  change across the range, each spectrograph on its own: SM1 +4.6%, SM3 +6.9%

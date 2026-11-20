@@ -5,18 +5,20 @@ import os.path as osp
 
 from dev import get_spectra_and_peaks, define_lines_and_intensities
 from dev import make_dataframe, add_absorption_origin
+from dev.species_intensities import DATA_PATH
 
 def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'lineList_test', importance_limit_group = 1e-2, chem_scatters = 3,\
                   min_wav = 360, max_wav = 1300, steps_per_line = 100, line_spread = 0.1, resolution = np.inf, dlambda = 15, intensity_cut = 0.0, inclusion_limit = 1e-3,\
                   linewidth_scatters = 1, LSF_err = 0.03, continuum = True, aerosols = ['background', 'volcanic'], pwvs = [0.0, 2.0], zds = [0, 40], base = '~/../../tigress/cj1223/', \
-                  data_path = 'data/', use_centroider = False, total_lim = 0.95, contribution_lim = 0.99, originDf_file = 'grid_mk50',\
-                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], obs = 'MaunaKea', verbose = 0):
+                  data_path = DATA_PATH, use_centroider = False, total_lim = 0.95, contribution_lim = 0.99, originDf_file = 'grid_mk50',\
+                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], obs = 'MaunaKea', verbose = 0, r_scat = 0.0125, wf = 3.4, r_hot_scales = [1.0]):
     
     '''Function make a linelist for use for wavelength calibration
     
     Inputs:
     
     Trots, Tvibs: arrays or lists of the rotational/vibrational temperatures to simulate [K]
+    r_hot_scales: multipliers of the OH hot-population fractions (species_intensities.R_HOT), looped like Trots and Tvibs to span the observed variability
     
     min_wav, max_wav: wavelength range to consider [nm]. Make this range a little wider than the actual spectral range you would like.
     steps_per_line: number of steps per line spread interval for doing grid calculations. Turning this up will lead to a slower but more precise calculation.
@@ -48,6 +50,9 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     important_species: what absorption origins to consider
     
     obs: which observing site to do transmission calculations for, see github/google drive for which sites are already available
+
+    r_scat, wf: the line wing, the fraction of each line's flux in an exponential scattering wing and its scale length in units of the Gaussian sigma.
+            PFS sky spectra (2026-10) favour about 0.005 (r) and 0.003 (n), and 0.0125 in b
 
     verbose: 0 = print almost nothing, 1 = print things to follow the progress, 2 = print enough to do some approximative debugging
     
@@ -87,7 +92,7 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
 
     peak_wavs, specs, continuum_specs, transmission_curves, transmission_wavs = get_spectra_and_peaks(wav_range, Trots = Trots, Tvibs = Tvibs, chem_scatters = chem_scatters, linewidth_scatters = linewidth_scatters,\
                           LSF_err = LSF_err, inclusion_limit = inclusion_limit, cont = continuum, intensity_cut = intensity_cut, line_spread = line_spread, resolution = resolution, dlambda = dlambda, use_centroider = use_centroider,\
-                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, obs = obs, verbose = verbose)
+                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, obs = obs, verbose = verbose, r_scat = r_scat, wf = wf, r_hot_scales = r_hot_scales)
     if verbose!=0:
         print('Finding the common lines')
         
@@ -107,19 +112,21 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     
     if np.any(mu_unstable_wav):
         counts = np.hstack([stable_counts, unstable_counts]) 
+        stable = np.hstack([np.ones_like(stable_counts), np.zeros_like(unstable_counts)]) # matched one to one across every spectrum
         mu_wav, var_wav = np.hstack([mu_stable_wav, mu_unstable_wav]), np.hstack([var_stable_wav, var_unstable_wav])
         mu_I, var_I = np.hstack([mu_stable_I, mu_unstable_I]), np.hstack([var_stable_I, var_unstable_I])
     else:
         counts = stable_counts
+        stable = np.ones_like(stable_counts)
         mu_wav, var_wav = mu_stable_wav, var_stable_wav
         mu_I, var_I = mu_stable_I, var_stable_I
-    a = np.array([mu_wav, var_wav, mu_I, var_I, counts]).T
-    mu_wav, var_wav, mu_I, var_I, counts = a[a[:, 0].argsort()].T
+    a = np.array([mu_wav, var_wav, mu_I, var_I, counts, stable]).T
+    mu_wav, var_wav, mu_I, var_I, counts, stable = a[a[:, 0].argsort()].T
 
     number_of_spectra = len(specs)
         
     lineDf, A0 = make_dataframe(mu_wav, var_wav, mu_I, var_I, counts, transmission_curves, transmission_wavs, wav_range, Nspec = number_of_spectra, Trot_0 = np.mean(Trots), Tvib_0 = np.mean(Tvibs),\
-                                importance_limit_group = importance_limit_group, dlambda = dlambda, line_spread = line_spread, resolution = resolution, inclusion_limit = inclusion_limit, data_path = data_path, verbose = verbose)
+                                importance_limit_group = importance_limit_group, dlambda = dlambda, line_spread = line_spread, resolution = resolution, inclusion_limit = inclusion_limit, data_path = data_path, verbose = verbose, stable = stable.astype(bool), r_scat = r_scat, wf = wf)
 
     ########################################
     ### Add the origin of the absorption ###

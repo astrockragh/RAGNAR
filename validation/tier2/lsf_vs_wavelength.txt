@@ -1,0 +1,22 @@
+# Line spread vs wavelength within each arm (pfsMerged stacks, per-line sigma with the blend structure fixed)
+
+## b arm: 5 lines, 589-636 nm, spectrographs [np.int64(1), np.int64(4)]
+  sigma at 612 nm, per spectrograph: SM1 0.0954, SM4 0.0996 nm
+  linear slope +0.1808 +- 0.0459 pm/nm (+3.9 sigma): sigma changes by +8.6% across the measured range
+  for constant resolving power it would be +0.1591 pm/nm (+7.6%); measured / constant-R slope = 1.14
+  quadratic term +0.006365 pm/nm^2; scatter of lines about the linear fit 0.52 pm (0.5% of sigma), rms reduction from the quadratic term 38.2%
+  change across the range, each spectrograph on its own: 
+
+## n arm: 32 lines, 992-1248 nm, spectrographs [np.int64(1), np.int64(2), np.int64(3), np.int64(4)]
+  sigma at 1120 nm, per spectrograph: SM1 0.1069, SM2 0.1088, SM3 0.1118, SM4 0.1131 nm
+  linear slope -0.0036 +- 0.0038 pm/nm (-0.9 sigma): sigma changes by -0.8% across the measured range
+  for constant resolving power it would be +0.0983 pm/nm (+22.9%); measured / constant-R slope = -0.04
+  quadratic term -0.000010 pm/nm^2; scatter of lines about the linear fit 4.02 pm (3.7% of sigma), rms reduction from the quadratic term 0.0%
+  change across the range, each spectrograph on its own: SM2 -12.6%, SM3 -0.4%, SM4 -0.4%
+
+## r arm: 70 lines, 687-946 nm, spectrographs [np.int64(1), np.int64(2), np.int64(3), np.int64(4)]
+  sigma at 816 nm, per spectrograph: SM1 0.1235, SM2 0.1145, SM3 0.1158, SM4 0.1163 nm
+  linear slope -0.0078 +- 0.0015 pm/nm (-5.2 sigma): sigma changes by -1.7% across the measured range
+  for constant resolving power it would be +0.1440 pm/nm (+31.8%); measured / constant-R slope = -0.05
+  quadratic term -0.000032 pm/nm^2; scatter of lines about the linear fit 2.56 pm (2.2% of sigma), rms reduction from the quadratic term 0.1%
+  change across the range, each spectrograph on its own: SM1 +0.7%, SM2 -6.3%, SM3 -3.7%, SM4 -3.1%

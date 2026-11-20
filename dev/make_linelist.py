@@ -6,8 +6,8 @@ import pandas as pd
 ### Import my own functions ###
 ###############################
 
-from .utils import gauss
-from .species_intensities import get_atomic_lines, get_O2_at_T, get_pgopher_linelist, make_OH_intensities
+from .utils import gauss, open_window
+from .species_intensities import get_atomic_lines, get_O2_at_T, get_pgopher_linelist, make_OH_intensities, DATA_PATH
 from .make_spectra import get_relevant_lines, get_transmission_at_lines, make_continuum_at_lines
 
 def is_notebook():
@@ -30,7 +30,7 @@ else:
 
 
 def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, counts, transmission_curves, transmission_wavs, wav_range, Nspec, Trot_0 = 195, Tvib_0 = 1e4,\
-                   importance_limit_group = 1e-2, dlambda = 15, line_spread = 0.1, resolution = np.inf, inclusion_limit = 1e-3, verbose = 1, data_path = 'data'):
+                   importance_limit_group = 1e-2, dlambda = 15, line_spread = 0.1, resolution = np.inf, inclusion_limit = 1e-3, verbose = 1, data_path = DATA_PATH, stable = None, r_scat = 0.0125, wf = 3.4):
     
     ''' Function to make a final DataFrame with good lines
     
@@ -91,7 +91,7 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
         print('Finding lines to include.')
     
     # limit the lines to only lines that contribute significantly
-    include = get_relevant_lines(A0, delta_local = dlambda, sigma_line = line_spread, resolution = resolution, inclusion_limit = inclusion_limit)
+    include = get_relevant_lines(A0, delta_local = dlambda, sigma_line = line_spread, resolution = resolution, r_scat = r_scat, wf = wf, inclusion_limit = inclusion_limit)
 
     if verbose > 0: 
         print('Convolving transmission curve at line position')
@@ -119,44 +119,47 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
     transmission = []
     E_As = []
     
+    # pull out the columns once, filtering the full DataFrame for every line is slow
+    A0_pos = A0['Position'].to_numpy(dtype = float)
+    A0_I = A0['Intensity'].to_numpy(dtype = float)
+    A0_ids = A0.index.to_numpy()
+    A0_EA = A0['A'].fillna(0.).to_numpy() # Einstein A's, O2 has them in 'a'
+    A0_Ea = A0['a'].fillna(0.0).to_numpy()
+    A0_trans = A0['transmission'].to_numpy(dtype = float)
+    A0_species = A0['Species'].to_numpy()
+    A0_vup, A0_vlow, A0_Jup, A0_Nup = A0["v'"].to_numpy(), A0['v"'].to_numpy(), A0["J'"].to_numpy(), A0["N'"].to_numpy()
+    A0_branch, A0_label = A0['Branch'].to_numpy(), A0['Label'].to_numpy()
+    
     # go through the mean of the peak wavelengths
     for wav in tqdm(mu_stable_wav, desc="Getting Line Info"):
         
-        lines = []
-        
         #select all the lines that could possibly contribute and calculate how much intensity they contrubite at the line center
-        Anarrow = A0[np.logical_and(A0['Position'] >  wav - dlambda, A0['Position'] < wav + dlambda)]
-        for I, pos in zip(np.array(Anarrow['Intensity']), np.array(Anarrow['Position'])): 
-            if resolution == np.inf:
-                lines.append(I*gauss(wav, pos, line_spread)) # the intensity at that line position, this maybe should be a convolution but the error is small and this is much faster
-            else:
-                lines.append(I*gauss(wav, pos, wav/resolution)) # the intensity at that line position, this maybe should be a convolution but the error is small and this is much faster
-                
-        lines = np.array(lines)
+        narrow = np.nonzero(np.logical_and(A0_pos >  wav - dlambda, A0_pos < wav + dlambda))[0]
+        if resolution == np.inf:
+            lines = A0_I[narrow]*gauss(wav, A0_pos[narrow], line_spread) # the intensity at that line position, this maybe should be a convolution but the error is small and this is much faster
+        else:
+            lines = A0_I[narrow]*gauss(wav, A0_pos[narrow], wav/resolution) # the intensity at that line position, this maybe should be a convolution but the error is small and this is much faster
 
         Itot = np.sum(lines) #total intensity of all lines at the line position       
 
-        Aall = Anarrow[lines>Itot*importance_limit_group**3] # things that may contribute even a little bit
-        line_ids = Aall.index.to_numpy() # the indices of all the lines, even very weak ones, for potential lookup
+        line_ids = A0_ids[narrow][lines>Itot*importance_limit_group**3] # the indices of all the lines, even very weak ones, for potential lookup
 
         
         # select lines that contribute to the sum of the line strength by more than the importance limit for the group
         linemask = lines>Itot*importance_limit_group # mask for lines that actually contribute
         if np.sum(linemask) == 0:
-            print(wav, Anarrow)
-        Aimportant = Anarrow[linemask] # lines that actually contribute
+            print(wav, A0.iloc[narrow])
+        imp = narrow[linemask] # lines that actually contribute
         Is = lines[linemask]
         importance = np.round(Is/np.sum(Is), 4) # the relative importance of each line in the group
          
-        E_A_effective = np.sum(importance*np.array(Aimportant['A'].fillna(0.))+importance*np.array(Aimportant['a'].fillna(0.0))) #effective Einstein A's of the transition
+        E_A_effective = np.sum(importance*A0_EA[imp]+importance*A0_Ea[imp]) #effective Einstein A's of the transition
         E_As.append(E_A_effective)
         fraction_missing = (Itot-np.sum(lines[linemask]))/Itot # get the fraction of intensity that is left out by only considering the important lines
         percentage_err.append(fraction_missing)
 
-        Aimportant = Aimportant.reset_index(drop = True) # reset index for easy indexing later
-        
         # get the total transmission of the important lines
-        trans_important = np.average(Aimportant['transmission'], weights = lines[linemask]/Aimportant['transmission']) #get the intensity weighted average transmission 
+        trans_important = np.average(A0_trans[imp], weights = lines[linemask]/A0_trans[imp]) #get the intensity weighted average transmission 
         transmission.append(trans_important)
         
         #######################
@@ -168,13 +171,13 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
             
         individual_labels = [] # save vibrational state, branch and J-state and species for check if they are all the same, if they are, the line is a 'clean' line
         label_str = '' # initialize label string
-        for i in range(len(Aimportant)):
-            if Aimportant['Species'][i] == 'OH': # for details of the OH transition which unfortunately is the only thing we have a lot of details for
-                vup = Aimportant["v'"][i] # upper vibrational state
-                Jup = Aimportant["J'"][i]
-                Nup = int(Aimportant["N'"][i])
-                vlow = Aimportant['v"'][i] # lower vibrational state
-                branch = Aimportant['Branch'][i] # rotational transition details, also considering satellite transition
+        for i in imp:
+            if A0_species[i] == 'OH': # for details of the OH transition which unfortunately is the only thing we have a lot of details for
+                vup = A0_vup[i] # upper vibrational state
+                Jup = A0_Jup[i]
+                Nup = int(A0_Nup[i])
+                vlow = A0_vlow[i] # lower vibrational state
+                branch = A0_branch[i] # rotational transition details, also considering satellite transition
                 label = f"({int(vup)}-{int(vlow)}){branch}"
                 label_str +=  label
                 label_str_i = f'v{vup}J{Jup}N{Nup}' #only consider upper state
@@ -182,11 +185,11 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
                 individual_labels.append(label_str_i)
 
             else: # for everything else
-                label = Aimportant['Label'][i]
+                label = A0_label[i]
                 label_str +=  label
                 individual_labels.append(label)
                 
-            if i<len(Aimportant)-1:
+            if i != imp[-1]:
                 label_str += '|'
 
         if len(np.unique(individual_labels))==1: # if they are the same, it's a clean transition!
@@ -195,7 +198,7 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
             clean.append(False)
 
         Nlines.append(len(Is)) # number of important lines
-        subline_wavs.append(Aimportant['Position'].to_numpy()) # save wavelength of each subline
+        subline_wavs.append(A0_pos[imp]) # save wavelength of each subline
         important_labels.append(label_str) # save label
         importances.append(importance) 
         original_ids.append(line_ids) 
@@ -215,8 +218,8 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
         sep = np.min([down, up]) # see if going up or down in wavelength space is closest
         separation.append(sep)
 
-    robust = counts < Nspec
-    robust = ~robust
+    # robust = matched one to one across every spectrum. Without that information, fall back to "found in every spectrum"
+    robust = np.asarray(stable, dtype = bool) if stable is not None else counts >= Nspec
     
     # make all the columns
     lineDf = pd.DataFrame(data = mu_stable_wav, columns = ['wav']) # the mean wavelength that we find the peak of the line at
@@ -232,7 +235,7 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
     lineDf['number_of_lines'] = Nlines # the number of lines that contribute significantly to the peak
     lineDf['clean'] = clean # if the line consists of things that are supposed to covary
     lineDf['robust'] = robust # if the line is identifiable across different runs
-    lineDf['detection_prob'] = np.round(np.array(counts.astype(int))/np.max(counts.astype(int)), 4) #probability of detecting line
+    lineDf['detection_prob'] = np.round(np.array(counts.astype(int))/Nspec, 4) #probability of detecting line, the fraction of simulated spectra it is found in
     
     lineDf['subline_wav'] = subline_wavs # the wavelengths of the sublines that make up the lin
     lineDf['subline_I'] = importances # their fractional contributions to the total intensity
@@ -259,14 +262,11 @@ def load_species_transmission(file = 'grid_mk50', base = '~/../../tigress/cj1223
     if verbose == 2:
         print('Loading low-resolution species dependent transmission curve')
     
-    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 3, nrows = 1, engine='python') # load file to get column names
+    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 3, nrows = 1) # load file to get column names
     columns = trans.columns
-    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 4, skipfooter = 1, engine='python') # load data
+    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 4, comment = '}') # load data, the file ends with a '}' line
     trans.columns = columns
     
-    mins = trans.describe().iloc[3] # get the minimums of transmission per species
-    mask = mins<1.0 # if the transmission for the species is always 1, we don't care
-    important_species = ['Freq']+list(trans.columns[mask])
     trans.columns = [c.strip(' ') for c in trans.columns] 
     trans['nm'] = 1e7/trans['Freq'] # convert inverse cm to nm
     
@@ -301,17 +301,19 @@ def add_absorption_origin(lineDf, line_spread = 0.1, resolution = np.inf, total_
     else:
         delta = 2*np.mean(lineDf['wav'])/resolution # same here but for resolution
     
+    # the curve is on an ascending frequency grid, flip it to ascending wavelength so the window around each line is a slice
+    nm = trans_species['nm'].to_numpy()[::-1]
+    species_trans = trans_species[important_species].to_numpy()[::-1]
+    
     for wav, t in zip(lineDf['wav'], lineDf['transmission']):
-        mask = np.logical_and(trans_species['nm']>wav-delta, trans_species['nm']<wav+delta)
-        tlocal = trans_species[mask][important_species] #there is never enough 'CO, H2Ocnt', 'N2O', 'NO2', 'SO2' for them to have below 99% transmission, even at ZD = 50
-        desc = tlocal.describe()
-        mask = desc.iloc[3]<contribution_lim #only species which actually contribute! This essentially says that if there is any significant absorption from a given species, include it.
-        desc = desc[desc.columns[mask]]
-        if t>total_lim: # if the line isn't attenuated that much overall
-            mask[0] = False
+        lo, hi = open_window(nm, wav-delta, wav+delta)
+        #there is never enough 'CO, H2Ocnt', 'N2O', 'NO2', 'SO2' for them to have below 99% transmission, even at ZD = 50
+        if hi > lo:
+            mask = np.min(species_trans[lo:hi], axis = 0)<contribution_lim #only species which actually contribute! This essentially says that if there is any significant absorption from a given species, include it.
         else:
-            mask[1] = True
-        masks.append(np.array(mask))
+            mask = np.zeros(len(important_species), dtype = bool) # no points in the window, nothing to blame
+        mask[0] = t <= total_lim # the total ('combin') bit is set if the line is significantly attenuated overall. The else branch used to set the aerosol bit instead
+        masks.append(mask)
         
     ### making a string based bitmask
     ss = []

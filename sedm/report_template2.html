@@ -1,0 +1,427 @@
+<title>SEDM Sky-Line Calibration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the answers first, then the sky, then the evidence for (a) and (b), then limits. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #12151b; --ink-2: #454c58; --muted: #6a7180; --rule: #dce0e6;
+  --accent: #1d5aa6; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s1-soft: rgba(42,120,214,.16); --s2-soft: rgba(235,104,52,.55); --hatch: rgba(106,113,128,.10);
+  --ok: #17734a; --ok-bg: #e3f3ea; --warn: #9a5800; --warn-bg: #fbefdc; --bad: #a8261b; --bad-bg: #fbe6e3;
+  --f-display: "Spectral", Georgia, "Times New Roman", serif;
+  --f-body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1116; --surface: #151a21; --ink: #eef1f5; --ink-2: #b9c0cb; --muted: #8d96a5; --rule: #2a313c;
+  --accent: #8db8ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s1-soft: rgba(57,135,229,.24); --s2-soft: rgba(217,89,38,.6); --hatch: rgba(141,150,165,.10);
+  --ok: #57c690; --ok-bg: #12291f; --warn: #f0a640; --warn-bg: #2d2214; --bad: #f97a6e; --bad-bg: #2f1714; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #151a21; --ink: #eef1f5; --ink-2: #b9c0cb; --muted: #8d96a5; --rule: #2a313c;
+  --accent: #8db8ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s1-soft: rgba(57,135,229,.24); --s2-soft: rgba(217,89,38,.6); --hatch: rgba(141,150,165,.10);
+  --ok: #57c690; --ok-bg: #12291f; --warn: #f0a640; --warn-bg: #2d2214; --bad: #f97a6e; --bad-bg: #2f1714; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--f-body); padding-inline: 20px; padding-block: 40px 64px; }
+main { max-width: 900px; margin: 0 auto; display: grid; gap: 36px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(30px, 5vw, 42px); letter-spacing: -.01em; }
+h2 { font-size: 26px; }
+h3 { font-size: 19px; }
+p { margin: 0; max-width: 68ch; }
+section { display: grid; gap: 16px; }
+.eyebrow { font: 500 12px/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 18px; color: var(--ink-2); }
+header { display: grid; gap: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 28px; }
+i.R { font-family: var(--f-display); font-style: italic; }
+code { font-family: var(--f-mono); font-size: .88em; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.answer { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.answer h3 { font-size: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 13px/1 var(--f-body); padding: 6px 10px; border-radius: 999px; }
+.chip svg { width: 14px; height: 14px; flex: none; }
+.chip.ok { color: var(--ok); background: var(--ok-bg); } .chip.warn { color: var(--warn); background: var(--warn-bg); } .chip.bad { color: var(--bad); background: var(--bad-bg); }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 68ch; }
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { font-size: 14px; color: var(--ink-2); max-width: 75ch; }
+.chart { position: relative; overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 8px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart.wide svg { min-width: 640px; }
+.pair-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.pair-charts .chart svg { min-width: 300px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); padding: 2px 6px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 0; border-top: 3px solid; display: inline-block; }
+.legend i.dash { border-top-style: dashed; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.seg .lbl { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.seg button { font: 500 13px/1 var(--f-body); color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+.seg button[aria-pressed="true"] { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg text { fill: var(--ink-2); font-family: var(--f-body); font-size: 12px; }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .muted { fill: var(--muted); }
+svg .lab { fill: var(--ink-2); font-size: 11.5px; }
+svg .lab.on { fill: var(--ink); font-weight: 600; }
+svg .lab.off { fill: var(--muted); }
+svg .cross { stroke: var(--muted); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 13px; color: var(--ink); box-shadow: 0 2px 10px rgba(0,0,0,.12); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 7px 9px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; vertical-align: bottom; }
+th:first-child, td:first-child { text-align: left; }
+tr:last-child td { border-bottom: 0; }
+tr.sub td { background: var(--hatch); font-weight: 600; color: var(--ink-2); text-align: left; }
+tr.dim td { color: var(--muted); }
+tr.best td { font-weight: 600; }
+td.wrap { white-space: normal; text-align: left; min-width: 220px; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.two-col > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.small { font-size: 14px; color: var(--ink-2); }
+details { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+details > summary { cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 19px; }
+details[open] > summary { margin-bottom: 14px; }
+details > div { display: grid; gap: 16px; }
+a { color: var(--accent); }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">RAGNAR sky simulations · updated 16 November 2026</div>
+  <h1>SEDM Sky-Line Calibration</h1>
+  <p class="lede">SEDM is being reinstalled at LMU's 2.1 m telescope on the Wendelstein. Can it calibrate (a) its wavelength scale to 1 nm and (b) its relative spectral response on the night sky alone? We simulated the sky at <i class="R">R</i> = λ/FWHM = 75, 100 and 150 over 340–1000 nm, and tested the flux calibration on <span data-k="nmock"></span> mock observations per resolution.</p>
+  <p class="small">Units: <i class="R">R</i> is resolving power. Line brightness is in rayleigh (R) and spectra are in R nm⁻¹. PWV and zenith distances are for the Wendelstein.</p>
+</header>
+
+<section aria-labelledby="answers">
+  <h2 id="answers" class="eyebrow">Short answers</h2>
+  <div class="answers">
+    <div class="answer">
+      <h3>(a) Wavelength calibration to 1 nm</h3>
+      <div class="chips"><span class="chip ok"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>Yes, 557–890 nm</span><span class="chip warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v6M8 12v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>8-4 band marginal</span><span class="chip bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>Nothing below 557 nm</span></div>
+      <p>Eight sky features from [O I] 557.7 nm to the OH 7-3 band hold their positions to σ ≤ 0.5 nm (most ≤ 0.2 nm). The 8-4 blend at 939 nm scatters by σ = 1.2 nm. A 10% error in the assumed resolution moves the OH blends by 0.2–0.7 nm. In 340–550 nm the brightest airglow feature reaches only <span data-k="blue"></span> R nm⁻¹, against about 10 R nm⁻¹ of dark-sky continuum.</p>
+    </div>
+    <div class="answer">
+      <h3>(b) Relative flux calibration</h3>
+      <div class="chips"><span class="chip ok"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>Yes, 650–990 nm, to about 1%</span><span class="chip warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v6M8 12v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>Needs a forward model</span></div>
+      <p>Each OH vibrational level emits several bands across the red, and at <i class="R">R</i> = 100 those blends come 95–99% from one level. Fitting the whole 610–995 nm sky with one template per level recovered the instrument response, relative to 700 nm, to <b>0.1–0.5%</b> with about 1,000 sky spaxels in 30 minutes, <b>0.2–1.1%</b> with 100, and 0.5–3% with 10. The fit also recovers PWV (±0.6–0.9 mm). Measuring single band features and taking ratios is several to tens of times worse. PWV affects only the 8-4 band strongly.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="sky">
+  <h2 id="sky">The sky at SEDM resolution</h2>
+  <p>At these resolutions each OH band collapses into one or two smooth humps. Highlight a group to see which parts of the spectrum it makes. Numbers label OH bands (v′–v″).</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Resolution" id="ctl-R"><span class="lbl">Resolution</span></div>
+    <div class="seg" role="group" aria-label="Highlight group" id="ctl-G"><span class="lbl">Highlight</span></div>
+  </div>
+  <figure>
+    <div class="chart wide" id="spec"></div>
+    <figcaption id="speccap"></figcaption>
+  </figure>
+</section>
+
+<section aria-labelledby="wave">
+  <h2 id="wave">(a) Wavelength calibration</h2>
+  <p>Peak positions were measured as in the RAGNAR line lists, with a matched filter of the LSF width, over 1,080 simulated Wendelstein skies at <i class="R">R</i> = 100. σ<sub>λ</sub> is the scatter of each peak. The full range spans the extremes of every parameter at once. The last column gives the shift if the true resolution were 75 or 150.</p>
+  <div class="table-wrap"><table id="wavetab"></table></div>
+  <ul>
+    <li><b>The scatter meets the 1 nm budget everywhere except the 8-4 band.</b> The 8-4 blend shape changes with T<sub>rot</sub>, moving its peak by up to 4 nm; use it with a low weight, or fit the sky model rather than the peak. The weak 6-1 blend and the 7-3 blend exceed 1 nm only at the extreme corners of the grid.</li>
+    <li><b>The resolution has to be known to roughly 10%.</b> A wrong <i class="R">R</i> changes the blend shapes. Fitting a model sky convolved with the LSF measured from arcs removes the problem.</li>
+    <li><b>Use the reference list made with the same peak finder.</b> Raw peaks and matched-filter peaks of the same blend differ by up to 1.3 nm.</li>
+    <li><b>Below 557 nm the arcs must carry the solution.</b> Light-pollution lines from the Munich area (not modelled) may help in the blue.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="flux">
+  <h2 id="flux">(b) Relative flux calibration</h2>
+  <p>All flux measurements use the spectra without the centroider. The calibration target is the spectral shape of the response, normalised at 700 nm.</p>
+
+  <h3>The groups that vary together</h3>
+  <p>All lines from one upper vibrational level (v′) share that level's population, which carries all the night-to-night variation in vibrational excitation and chemistry. Between bands of the same level, only the rotational distribution matters: T<sub>rot</sub> and the hot population. Their ratios are set by the Einstein-A branching. Levels v′ = 6–9 each have two or three bands between 610 and 995 nm, and those carry the colour information.</p>
+  <div class="table-wrap"><table id="grouptab"></table></div>
+
+  <h3>PWV hits one band combination much harder than the others</h3>
+  <div class="pair-charts">
+    <figure>
+      <div class="chart" id="pwvchart"></div>
+      <div class="legend" id="pwvleg"></div>
+      <figcaption>Change in each band-flux ratio relative to PWV = 0, at <i class="R">R</i> = 100 and ZD 31°. Fiducial airglow, fluxes from fixed-position feature fits. The dashed line is what a star's continuum sees at the same two wavelengths. Hover for values.</figcaption>
+    </figure>
+    <div style="display:grid;gap:12px;align-content:start">
+      <p>The 8-4 band sits in the 940 nm water band, so the 8-3/8-4 ratio changes by about 1.5% per mm at low PWV, flattening as the strongest water lines saturate. The other same-level pairs change by 0.1–0.2% per mm. The 8-4 sky lines are also absorbed differently from a star's continuum: they fall partly on and partly between water lines. A response derived from 8-4 therefore needs a line-by-line telluric model, and cannot simply reuse a standard star's telluric correction.</p>
+      <div class="table-wrap"><table id="pwvtab"></table></div>
+    </div>
+  </div>
+
+  <h3>Mock observations: how well the response comes back</h3>
+  <p>Each mock is one random night: T<sub>rot</sub> 175–215 K, T<sub>vib</sub> 7,500–12,500 K, hot population ×0.7–1.4, random chemistry for every species, PWV 0–27 mm, ZD 0–48°, continuum 5–25 R nm⁻¹ with a random slope, and an LSF width off by 3% (1σ) from the assumed one. Each is seen through a random smooth instrument response, sampled at 3 pixels per FWHM, with photon noise. We measured the response two ways:</p>
+  <ul>
+    <li><b>Feature fits.</b> The flux of each band blend from Gaussians at fixed positions plus a linear background. Ratios are compared with the ratio predicted for fiducial airglow.</li>
+    <li><b>Forward model.</b> A fit of the whole 610–995 nm spectrum: one template per v′ level, plus O₂ b(0-1), [O I] 630/636 and Hα, each with a free amplitude. The templates are multiplied by a smooth response exp(s₁x + s₂x²). The fit includes the sky continuum seen through the same atmosphere, T<sub>rot</sub>, and optionally PWV, the hot-population fraction and T<sub>vib</sub>.</li>
+  </ul>
+  <p class="small">Noise levels are given as detected photons per rayleigh of line flux. A rough estimate is 5 per spaxel in 30 minutes, if the IFU keeps the étendue per spaxel it had on the P60 and the total throughput is about 20%. 5,000 is then most of the ~1,000 sky spaxels of one exposure, 500 is about 100 spaxels, and 50 about 10.</p>
+  <figure>
+    <div class="chart" id="respchart"></div>
+    <div class="legend" id="respleg"></div>
+    <figcaption>Forward model with PWV, hot population and T<sub>vib</sub> fitted, <i class="R">R</i> = 100: 68% half-width of the error in the recovered response, relative to 700 nm. Medians are within 0.2% everywhere. Hover for values.</figcaption>
+  </figure>
+  <div class="table-wrap"><table id="mocktab"></table></div>
+  <ul>
+    <li><b>Feature fits are not good enough.</b> Even with the telluric absorption known, 8-3/8-4 comes back to ±3%. 7-2/7-3 fails (±30%), because 7-2 sits in the O₂ B band, where the sky continuum dips by about as much as the 7-2 emission.</li>
+    <li><b>The forward model gets to the 1% level, and needs the hot population.</b> Fitting the hot-population fraction and T<sub>vib</sub> cuts the noise-free error floor by about a factor of three. Without them, the error at most wavelengths tracks the true hot population almost perfectly (correlation ≥ 0.9).</li>
+    <li><b>The sky measures its own PWV.</b> The fit recovers PWV to <span data-k="pwv100"></span> and T<sub>rot</sub> to <span data-k="trot100"></span> at <i class="R">R</i> = 100.</li>
+    <li><b>Resolution matters little.</b> With 100 sky spaxels the response error at 940 nm is <span data-k="r940"></span> at <i class="R">R</i> = 75 / 100 / 150. Individual band fluxes come back to <span data-k="bflux"></span> (R = 100 / 150), because neighbouring v′ groups trade flux at low resolution. The response is less affected, because it comes from the shared level amplitudes.</li>
+  </ul>
+
+  <h3>What the mocks do not include</h3>
+  <ul>
+    <li><b>Errors in the Einstein-A branching ratios.</b> The mocks use the same A values for the truth and the templates. Any error in the ratio between, say, the Δv = 4 and Δv = 5 bands enters the response directly. <a href="https://arxiv.org/abs/2005.06603">Noll et al. (2020)</a> found systematic errors in all six published A sets they tested. One observation of a spectrophotometric standard, compared with a simultaneous sky fit, fixes these ratios for good. After that, the sky alone tracks the response.</li>
+    <li><b>Response structure finer than a quadratic.</b> The sky only constrains the response at the band positions, roughly every 50 nm between 650 and 990 nm.</li>
+    <li><b>A real OH population has more freedom than the model's cold-plus-hot distribution.</b> This includes high-J non-thermal populations and Λ-doublet asymmetries.</li>
+    <li><b>The Wendelstein atmosphere is approximated.</b> We used Mauna Kea MODTRAN curves with the slant O₂, Rayleigh and H₂O columns matched. Ozone, aerosols and the effective extinction of a diffuse source are not modelled.</li>
+  </ul>
+
+  <h3>For reference: peaks from a single upper state need <i class="R">R</i> ≳ 700</h3>
+    <div style="display:grid;gap:16px">
+      <p>The original question asked for peaks that are ≥95–99% from one upper state (v′, J′, F). At <i class="R">R</i> = 75–150 no OH peak gets more than about 45% from one upper state. Pairs at ≥95% purity, ≥100 nm apart and ≥5 R bright first appear at <i class="R">R</i> ≈ 700, and at ≥99% at <i class="R">R</i> ≈ 1500. 8-4 P<sub>1</sub>(3.5) never reaches 99%, because 8-4 Q<sub>1</sub>(6.5) and R<sub>2</sub>(11.5) lie within 0.035 nm of it.</p>
+      <div class="pair-charts">
+        <figure>
+          <div class="chart" id="pairs"></div>
+          <div class="legend"><span><i style="border-color:var(--s1)"></i>≥ 95% pure</span><span><i style="border-color:var(--s2)"></i>≥ 99% pure</span></div>
+          <figcaption>Upper states with ≥2 pure transitions ≥100 nm apart, in 340–1000 nm.</figcaption>
+        </figure>
+        <figure>
+          <div class="chart" id="example"></div>
+          <div class="legend"><span><i style="border-color:var(--s1)"></i>8-3 P<sub>1</sub>(3.5), 734.3 nm</span><span><i style="border-color:var(--s2)"></i>8-4 P<sub>1</sub>(3.5), 947.9 nm</span></div>
+          <figcaption>Worst-case purity of the example pair.</figcaption>
+        </figure>
+      </div>
+    </div>
+</section>
+
+<section aria-labelledby="limits">
+  <h2 id="limits">What the simulation leaves out</h2>
+  <ul>
+    <li><b>Blue airglow.</b> The O₂ Herzberg and Chamberlain bands are not in RAGNAR. They add faint, broad structure below about 450 nm, not clean features.</li>
+    <li><b>Light pollution and moonlight.</b> Lamp lines could help the blue wavelength scale. Moonlight raises the continuum and adds solar absorption features; the forward model would need a solar template term.</li>
+    <li><b>Continuum shape.</b> The mocks use a smooth power-law continuum. Real airglow continuum (NO₂, FeO) has broad structure near 600 nm, below the fitted range.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="method">
+  <h2 id="method">Method and files</h2>
+  <p class="small">RAGNAR (fast version), resolution mode, 334–1015 nm, Gaussian LSF at λ/FWHM = 75, 100, 150. RAGNAR grid: T<sub>rot</sub> 180/210 K, T<sub>vib</sub> 8000/12000 K, hot population ×0.75/1/1.33, five chemistry draws, three LSF widths, Wendelstein PWV 2.7/10.6/20 mm and ZD 0/48° (Mauna Kea MODTRAN at PWV 2/8/15 mm, ZD 40/60°). Mocks use a vectorised copy of RAGNAR's line model, checked against it to 10⁻¹³, with the full Mauna Kea PWV 0–20 mm × ZD 40/50/60° grid. Line lists: <code>lineLists/sedm_R*_{0,1}_wst_20261116</code>. Scripts and tables: <code>RAGNAR_new/sedm/</code> (<code>run_sedm.py</code>, <code>analyze_sedm.py</code>, <code>mock_sedm.py</code>).</p>
+</section>
+</main>
+
+<script>
+const D = /*DATA*/null;
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+const fmt = (v, n = 1) => (v === null || v === undefined) ? '–' : Number(v).toFixed(n);
+const sgn = (v, n = 1) => (v === null || v === undefined) ? '–' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(n);
+const setk = (k, v) => document.querySelectorAll(`[data-k="${k}"]`).forEach(e => e.innerHTML = v);
+setk('blue', fmt(D.blue_max, 1)); setk('nmock', D.n_mock);
+setk('pwv100', `±${fmt(D.mock_pwv['100'].Bh[0], 1)}–${fmt(D.mock_pwv['100'].Bh[1], 1)} mm (5,000–500 photons per rayleigh)`);
+setk('trot100', `±${fmt(D.mock_trot['100'][0], 1)}–${fmt(D.mock_trot['100'][1], 1)} K`);
+setk('r940', ['75', '100', '150'].map(R => '±' + fmt(D.mock_S[R].Bh['500.0'][6], 1) + '%').join(' / '));
+setk('bflux', `±${fmt(D.mock_flux['100']['8-3'][1][1], 1)}–${fmt(D.mock_flux['100']['7-2'][1][1], 1)}% / ±${fmt(D.mock_flux['150']['9-4'][1][1], 1)}–${fmt(D.mock_flux['150']['7-2'][1][1], 1)}%`);
+
+function tipFor(box) { const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; box.appendChild(t); return t; }
+function placeTip(box, tip, svg, sx, sy, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const r = svg.getBoundingClientRect(), b = box.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+  const px = r.left - b.left + box.scrollLeft + sx * r.width / vb.width, py = r.top - b.top + sy * r.height / vb.height;
+  const w = tip.offsetWidth; let left = px + 12; if (left + w > box.scrollLeft + b.width - 4) left = px - w - 12;
+  tip.style.left = left + 'px'; tip.style.top = Math.max(4, py - 10) + 'px';
+}
+function svgPt(svg, evt) { const p = svg.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+/* ---------- Figure 1: the sky, switchable resolution and highlighted group ---------- */
+(function () {
+  const F = D.fig, box = document.getElementById('spec'), cap = document.getElementById('speccap');
+  let state = { R: '100', g: 'none' };
+  try { const s = JSON.parse(localStorage.getItem('sedm-sky') || '{}'); if (F.R[s.R]) state.R = s.R; if (s.g && (s.g === 'none' || F.groups.includes(s.g))) state.g = s.g; } catch (e) {}
+  const ctlR = document.getElementById('ctl-R'), ctlG = document.getElementById('ctl-G');
+  const mk = (parent, val, label, key) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.v = val; b.addEventListener('click', () => { state[key] = val; draw(); }); parent.appendChild(b); return b; };
+  ['75', '100', '150'].forEach(R => mk(ctlR, R, R, 'R'));
+  mk(ctlG, 'none', 'None', 'g');
+  F.groups.forEach(g => mk(ctlG, g, g.replace('v′=', 'v′ ').replace(' 557.7', ' 557').replace(' 630/636', ' 630'), 'g'));
+  const W = 900, H = 360, m = { l: 54, r: 18, t: 76, b: 44 }, x0 = 340, x1 = 1000;
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+  const bandOf = lab => lab.band;
+  function inGroup(lab, g) { if (g === 'none') return null; if (g.startsWith('v′=')) return lab.band.split('-')[0] === g.slice(3) && /^\d-\d$/.test(lab.band); return lab.band === g; }
+  function draw() {
+    try { localStorage.setItem('sedm-sky', JSON.stringify(state)); } catch (e) {}
+    ctlR.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === state.R));
+    ctlG.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === state.g));
+    box.innerHTML = '';
+    const s = F.R[state.R], wav = F.wav;
+    const hiMax = Math.max(...s.hi); const ymax = Math.ceil(hiMax * 1.08 / 25) * 25;
+    const Y = v => H - m.b - v / ymax * (H - m.t - m.b);
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Simulated night-sky line spectrum at R = ${state.R}, 340 to 1000 nm` }, box);
+    el('rect', { x: X(340), y: Y(ymax), width: X(550) - X(340), height: Y(0) - Y(ymax), fill: 'var(--hatch)' }, svg);
+    for (let v = 0; v <= ymax; v += 25) { el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: 'grid' }, svg); el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg, v); }
+    for (let v = 350; v <= 1000; v += 50) { el('line', { x1: X(v), x2: X(v), y1: Y(0), y2: Y(0) + 5, class: 'axis' }, svg); el('text', { x: X(v), y: Y(0) + 19, 'text-anchor': 'middle' }, svg, v); }
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), class: 'axis' }, svg);
+    el('text', { x: (m.l + W - m.r) / 2, y: H - 6, 'text-anchor': 'middle' }, svg, 'Wavelength (nm, vacuum)');
+    el('text', { x: 14, y: (m.t + H - m.b) / 2, transform: `rotate(-90 14 ${(m.t + H - m.b) / 2})`, 'text-anchor': 'middle' }, svg, 'R nm⁻¹');
+    const band = wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.hi[i]).toFixed(1)}`).join(' ') + ' ' + wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.lo[i]).toFixed(1)}`).reverse().join(' ');
+    el('polygon', { points: band, fill: 'var(--s1-soft)' }, svg);
+    if (state.g !== 'none') {
+      const sh = s.share[state.g];
+      const pts = wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.mean[i] * sh[i]).toFixed(1)}`);
+      el('polygon', { points: `${X(wav[0])},${Y(0)} ` + pts.join(' ') + ` ${X(wav[wav.length - 1])},${Y(0)}`, fill: 'var(--s2-soft)' }, svg);
+    }
+    el('polyline', { points: wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.mean[i]).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, svg);
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(10), y2: Y(10), class: 'ref' }, svg);
+    el('text', { x: X(345), y: Y(10) - 6, class: 'muted' }, svg, 'dark-sky continuum ≈ 10 R nm⁻¹');
+    el('text', { x: X(445), y: Y(ymax * 0.45), 'text-anchor': 'middle', class: 'muted' }, svg, 'no usable airglow features');
+    // band labels, merged when closer than 9 nm
+    const labs = s.labels.slice().sort((a, b) => a.wav - b.wav), merged = [];
+    labs.forEach(l => { const last = merged[merged.length - 1]; if (last && l.wav - last.wav < 9) { last.items.push(l); last.wav = (last.wav + l.wav) / 2; } else merged.push({ wav: l.wav, items: [l] }); });
+    merged.forEach(gp => {
+      const i = Math.round((gp.wav - x0) / 0.5), top = Math.max(...s.hi.slice(Math.max(0, i - 6), i + 7));
+      const on = gp.items.some(l => inGroup(l, state.g)), cls = state.g === 'none' ? 'lab' : (on ? 'lab on' : 'lab off');
+      const yy = Y(top) - 6, xx = X(gp.wav);
+      el('line', { x1: xx, x2: xx, y1: yy, y2: yy - 5, stroke: 'var(--muted)', 'stroke-width': 1 }, svg);
+      el('text', { x: xx + 4, y: yy - 8, transform: `rotate(-90 ${xx + 4} ${yy - 8})`, class: cls }, svg, gp.items.map(l => l.band).join(' + '));
+    });
+    const cross = el('line', { y1: Y(ymax), y2: Y(0), class: 'cross', visibility: 'hidden' }, svg);
+    const dot = el('circle', { r: 4, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }, svg);
+    const tip = tipFor(box);
+    svg.addEventListener('pointermove', e => {
+      const p = svgPt(svg, e), w = x0 + (p.x - m.l) / (W - m.l - m.r) * (x1 - x0);
+      if (w < x0 || w > x1) { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; return; }
+      const i = Math.round((w - x0) / 0.5);
+      cross.setAttribute('x1', X(wav[i])); cross.setAttribute('x2', X(wav[i])); cross.setAttribute('visibility', 'visible');
+      dot.setAttribute('cx', X(wav[i])); dot.setAttribute('cy', Y(s.mean[i])); dot.setAttribute('visibility', 'visible');
+      const top = F.groups.map(g => [g, s.share[g][i]]).sort((a, b) => b[1] - a[1]).filter(x => x[1] >= 0.05).slice(0, 3);
+      placeTip(box, tip, svg, X(wav[i]), Y(Math.min(ymax, s.hi[i])), `<b>${wav[i].toFixed(1)} nm</b> · ${fmt(s.mean[i], 1)} R nm⁻¹ (${fmt(s.lo[i], 1)}–${fmt(s.hi[i], 1)})` + (top.length ? '<br>' + top.map(([g, v]) => `${g}: ${Math.round(100 * v)}%`).join(' · ') : ''));
+    });
+    svg.addEventListener('pointerleave', () => { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; });
+    cap.innerHTML = `Simulated line emission at <i class="R">R</i> = ${state.R} (no continuum): the mean of ${s.n_spec.toLocaleString('en-US')} Wendelstein-like spectra, with the full range over all simulated conditions shaded.` + (state.g === 'none' ? '' : ` The orange area is the part of the mean spectrum that comes from ${state.g}.`) + ' Hover for values and the groups that make each wavelength.';
+  }
+  draw();
+})();
+
+/* ---------- generic line chart (linear or log x) ---------- */
+function lineChart(id, cfg) {
+  const box = document.getElementById(id), W = cfg.W || 440, H = cfg.H || 280, m = { l: 50, r: cfg.mr || 16, t: 16, b: 46 };
+  const tx = cfg.log ? Math.log10 : (v => v), X0 = tx(cfg.x0), X1 = tx(cfg.x1);
+  const X = v => m.l + (tx(v) - X0) / (X1 - X0) * (W - m.l - m.r), Y = v => H - m.b - (v - cfg.y0) / (cfg.y1 - cfg.y0) * (H - m.t - m.b);
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': cfg.aria }, box);
+  cfg.yticks.forEach(v => { el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: v === 0 ? 'axis' : 'grid' }, svg); el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg, cfg.yfmt(v)); });
+  cfg.xticks.forEach(v => { el('line', { x1: X(v), x2: X(v), y1: Y(cfg.y0), y2: Y(cfg.y0) + 5, class: 'axis' }, svg); el('text', { x: X(v), y: Y(cfg.y0) + 19, 'text-anchor': 'middle' }, svg, cfg.xfmt ? cfg.xfmt(v) : v); });
+  el('line', { x1: m.l, x2: W - m.r, y1: Y(cfg.y0), y2: Y(cfg.y0), class: 'axis' }, svg);
+  el('text', { x: (m.l + W - m.r) / 2, y: H - 8, 'text-anchor': 'middle' }, svg, cfg.xlabel);
+  (cfg.refs || []).forEach(r => { el('line', { x1: m.l, x2: W - m.r, y1: Y(r.y), y2: Y(r.y), class: 'ref' }, svg); el('text', { x: W - m.r - 2, y: r.below ? Y(r.y) + 13 : Y(r.y) - 5, 'text-anchor': 'end', class: 'muted' }, svg, r.label); });
+  (cfg.vrefs || []).forEach(r => { el('line', { x1: X(r.x), x2: X(r.x), y1: Y(cfg.y1), y2: Y(cfg.y0), stroke: 'var(--ink-2)', 'stroke-width': 1, 'stroke-dasharray': '2 3' }, svg); el('text', { x: X(r.x) + 5, y: Y(cfg.y1) + 12, class: 'muted' }, svg, r.label); });
+  cfg.series.forEach(se => {
+    el('polyline', { points: se.x.map((x, i) => `${X(x).toFixed(1)},${Y(se.y[i]).toFixed(1)}`).join(' '), fill: 'none', stroke: se.color, 'stroke-width': se.width || 2, 'stroke-dasharray': se.dash || 'none', 'stroke-linejoin': 'round' }, svg);
+    if (cfg.markers) se.x.forEach((x, i) => el('circle', { cx: X(x), cy: Y(se.y[i]), r: 4, fill: se.color, stroke: 'var(--surface)', 'stroke-width': 2 }, svg));
+    if (se.label) el('text', { x: X(se.x[se.x.length - 1]) + 6, y: Y(se.y[se.y.length - 1]) + 4, class: 'lab' }, svg, se.label);
+  });
+  const cross = el('line', { y1: Y(cfg.y1), y2: Y(cfg.y0), class: 'cross', visibility: 'hidden' }, svg);
+  const tip = tipFor(box), xs = cfg.series[0].x;
+  svg.addEventListener('pointermove', e => {
+    const p = svgPt(svg, e); if (p.x < m.l || p.x > W - m.r) { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); return; }
+    let best = 0; xs.forEach((x, i) => { if (Math.abs(X(x) - p.x) < Math.abs(X(xs[best]) - p.x)) best = i; });
+    cross.setAttribute('x1', X(xs[best])); cross.setAttribute('x2', X(xs[best])); cross.setAttribute('visibility', 'visible');
+    placeTip(box, tip, svg, X(xs[best]), Y(cfg.series[0].y[best]), `<b>${cfg.tipx(xs[best])}</b><br>` + cfg.series.map(se => `${se.name}: ${cfg.tfmt(se.y[best])}`).join('<br>'));
+  });
+  svg.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+}
+function legend(id, items) { document.getElementById(id).innerHTML = items.map(([c, dash, t]) => `<span><i class="${dash ? 'dash' : ''}" style="border-color:${c}"></i>${t}</span>`).join(''); }
+
+/* ---------- wavelength table ---------- */
+(function () {
+  const t = document.getElementById('wavetab');
+  t.innerHTML = '<thead><tr><th>Feature</th><th>λ (nm)</th><th>Peak<br>(R nm⁻¹)</th><th>σ<sub>λ</sub><br>(nm)</th><th>Full range<br>(nm)</th><th>Within<br>1 nm</th><th>Main driver<br>(shift, nm)</th><th>Shift if <i class="R">R</i> =<br>75 / 150 (nm)</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  D.wavecal.forEach(r => {
+    const ok = r.range_nm <= 1 ? 'yes' : (r.sigma_nm <= 0.5 ? 'σ yes, extremes no' : 'no');
+    const tr = document.createElement('tr'); if (r.peak < 3) tr.className = 'dim';
+    tr.innerHTML = `<td>${r.name}</td><td>${fmt(r.wav, 2)}</td><td>${fmt(r.peak, 1)}</td><td>${fmt(r.sigma_nm, 2)}</td><td>${fmt(r.range_nm, 2)}</td><td>${ok}</td><td>${r.driver === '–' ? '–' : `${r.driver.replace(/T_(rot|vib)/, 'T<sub>$1</sub>')} (${sgn(r.driver_shift, 2)})`}</td><td>${sgn(r.dR75, 1)} / ${sgn(r.dR150, 1)}</td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+})();
+
+/* ---------- v' groups ---------- */
+(function () {
+  const names = { '655.0': '6-1', '686.0': '7-2', '728.9': '8-3', '752.7': '4-0', '775.5': '9-4', '787.7': '5-1 + 9-4', '838.3': '6-2', '884.1': '7-3', '936.6': '8-4', '945.0': '8-4', '996.1': '9-5 + 3-0' };
+  const rows = [
+    ["v′ = 9", ['775.5', '996.1'], 'Two bands in range, but 9-5 is half 3-0 at this resolution and 9-3 is under [O I] 630.'],
+    ["v′ = 8", ['728.9', '936.6', '945.0'], 'The cleanest pair, 8-3 and 8-4. 8-4 sits in the 940 nm water band.'],
+    ["v′ = 7", ['686.0', '884.1'], '7-2 and 7-3. 7-2 is weak and sits in the O₂ B band.'],
+    ["v′ = 6", ['655.0', '838.3'], '6-2 is clean. 6-1 is weak and shares its peak with Hα and the 9-3 wings.'],
+    ["v′ = 3–5", ['752.7', '787.7'], 'One band each in range (3-0, 4-0, 5-1). They carry no colour information, but must be in the model.'],
+  ];
+  const f = Object.fromEntries(D.features.map(x => [x.wav.toFixed(1), x]));
+  const t = document.getElementById('grouptab');
+  t.innerHTML = '<thead><tr><th>Level</th><th>Band features at <i class="R">R</i> = 100, nm (share of the peak from that level, worst case)</th><th>Note</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  rows.forEach(([lv, ws, note]) => {
+    const cells = ws.map(w => { const x = f[w]; return x ? `${names[w] || ''} at ${w} (${Math.round(100 * x.f_v)}% ${x.group})` : w; }).join('; ');
+    const tr = document.createElement('tr'); tr.innerHTML = `<td>${lv}</td><td class="wrap">${cells}</td><td class="wrap">${note}</td>`; tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+})();
+
+/* ---------- PWV ---------- */
+(function () {
+  const P = D.pwv['100']['31'], k = Object.keys(P);
+  const sel = [['8-3/8-4', 'var(--s1)'], ['7-2/7-3', 'var(--s2)'], ['6-1/6-2', 'var(--s3)'], ['9-4/9-5', 'var(--s4)']].filter(x => k.includes(x[0]));
+  const series = [];
+  sel.forEach(([pr, c]) => series.push({ name: `${pr} sky`, color: c, x: P[pr].pwv, y: P[pr].sky.map(v => 100 * v), label: pr === '8-3/8-4' ? 'sky lines' : null }));
+  series.push({ name: '8-3/8-4 star', color: 'var(--s1)', dash: '5 4', x: P['8-3/8-4'].pwv, y: P['8-3/8-4'].star.map(v => 100 * v), label: 'star' });
+  lineChart('pwvchart', { aria: 'Band-flux ratio change against PWV', x0: 0, x1: 27, y0: -10, y1: 35, xticks: [0, 5, 10, 15, 20, 25], yticks: [-10, 0, 10, 20, 30], yfmt: v => (v > 0 ? '+' : '') + v + '%', mr: 64,
+    xlabel: 'PWV at the Wendelstein (mm)', tipx: x => `PWV ${x.toFixed(1)} mm`, tfmt: v => sgn(v, 1) + '%', series });
+  legend('pwvleg', sel.map(([pr, c]) => [c, false, pr]).concat([['var(--s1)', true, '8-3/8-4, star continuum']]));
+  const t = document.getElementById('pwvtab'); const at = (arr, xs, x) => arr[xs.findIndex(v => Math.abs(v - x) < 0.01)];
+  let html = '<thead><tr><th>Ratio</th><th>PWV 0 → 10.6 mm<br><i class="R">R</i> = 75 / 100 / 150</th><th>0 → 26.6 mm<br><i class="R">R</i> = 100</th></tr></thead><tbody>';
+  sel.forEach(([pr]) => {
+    const v = ['75', '100', '150'].map(R => { const q = D.pwv[R]['31'][pr]; return q ? sgn(100 * at(q.sky, q.pwv, 10.64), 1) + '%' : '–'; }).join(' / ');
+    html += `<tr><td>${pr} sky</td><td>${v}</td><td>${sgn(100 * at(P[pr].sky, P[pr].pwv, 26.6), 1)}%</td></tr>`;
+  });
+  const v = ['75', '100', '150'].map(R => sgn(100 * at(D.pwv[R]['31']['8-3/8-4'].star, D.pwv[R]['31']['8-3/8-4'].pwv, 10.64), 1) + '%').join(' / ');
+  html += `<tr><td>8-3/8-4 star</td><td>${v}</td><td>${sgn(100 * at(P['8-3/8-4'].star, P['8-3/8-4'].pwv, 26.6), 1)}%</td></tr></tbody>`;
+  t.innerHTML = html;
+})();
+
+/* ---------- mock results ---------- */
+(function () {
+  const lam = D.lam_eval, S = D.mock_S['100'].Bh;
+  const series = [['5000.0', 'var(--s1)', '5,000 photons/R (≈1,000 spaxels)'], ['500.0', 'var(--s2)', '500 (≈100 spaxels)'], ['50.0', 'var(--s3)', '50 (≈10 spaxels)'], ['inf', 'var(--muted)', 'no noise']]
+    .map(([g, c, n]) => ({ name: n, color: c, dash: g === 'inf' ? '5 4' : 'none', x: lam, y: S[g] }));
+  lineChart('respchart', { aria: 'Error of the recovered response against wavelength', W: 880, H: 280, x0: 640, x1: 1000, y0: 0, y1: 3.5, xticks: [650, 700, 750, 800, 850, 900, 950, 1000], yticks: [0, 1, 2, 3], yfmt: v => '±' + v + '%', markers: true,
+    xlabel: 'Wavelength (nm)', tipx: x => `${x} nm`, tfmt: v => '±' + fmt(v, 2) + '%', series, vrefs: [{ x: 700, label: 'normalisation' }] });
+  legend('respleg', series.map(s => [s.color, s.dash !== 'none', s.name]));
+  const t = document.getElementById('mocktab');
+  let html = '<thead><tr><th>Recovered response ratio, <i class="R">R</i> = 100<br>(median error ± 68% half-width)</th><th>5,000<br>photons/R</th><th>500</th><th>50</th><th>No noise</th></tr></thead><tbody>';
+  ['8-3/8-4', '7-2/7-3'].forEach(pr => {
+    html += `<tr class="sub"><td colspan="5">${pr} (${pr === '8-3/8-4' ? '729 / 941 nm' : '686 / 884 nm'})</td></tr>`;
+    D.mock_pairs['100'][pr].forEach(c => {
+      const cls = c.case.startsWith('Forward model, PWV and hot') ? 'best' : (c.case.startsWith('Feature') ? 'dim' : '');
+      html += `<tr class="${cls}"><td>${c.case}</td>` + c.cells.map(([b, w]) => `<td>${sgn(b, 1)} ± ${fmt(w, 1)}%</td>`).join('') + '</tr>';
+    });
+  });
+  t.innerHTML = html + '</tbody>';
+})();
+
+/* ---------- single upper states (reference) ---------- */
+lineChart('pairs', { aria: 'Same-upper-state calibration pairs against resolving power', log: true, x0: 100, x1: 20000, y0: 0, y1: 18, xticks: [100, 300, 1000, 3000, 10000], xfmt: v => v.toLocaleString('en-US'), yticks: [0, 3, 6, 9, 12, 15, 18], yfmt: v => v, markers: true,
+  xlabel: 'Resolving power R = λ/FWHM (log)', tipx: x => `R = ${Math.round(x).toLocaleString('en-US')}`, tfmt: v => `${v} upper states`, vrefs: [{ x: 100, label: 'SEDM' }],
+  series: [{ name: '≥ 95%', color: 'var(--s1)', x: D.purity_scan['95_5'].R, y: D.purity_scan['95_5'].n_pairs }, { name: '≥ 99%', color: 'var(--s2)', x: D.purity_scan['99_5'].R, y: D.purity_scan['99_5'].n_pairs }] });
+const e83 = D.example['(8-3)pP1(3.5)'], e84 = D.example['(8-4)pP1(3.5)'];
+lineChart('example', { aria: 'Purity of 8-3 P1(3.5) and 8-4 P1(3.5) against resolving power', log: true, x0: 100, x1: 20000, y0: 0, y1: 1, xticks: [100, 300, 1000, 3000, 10000], xfmt: v => v.toLocaleString('en-US'), yticks: [0, .25, .5, .75, 1], yfmt: v => Math.round(v * 100) + '%',
+  xlabel: 'Resolving power R = λ/FWHM (log)', tipx: x => `R = ${Math.round(x).toLocaleString('en-US')}`, tfmt: v => (100 * v).toFixed(1) + '%', vrefs: [{ x: 100, label: 'SEDM' }],
+  refs: [{ y: .95, label: '95%', below: true }, { y: .99, label: '99%' }],
+  series: [{ name: '8-3 P₁(3.5)', color: 'var(--s1)', x: e83.R, y: e83.min }, { name: '8-4 P₁(3.5)', color: 'var(--s2)', x: e84.R, y: e84.min }] });
+</script>

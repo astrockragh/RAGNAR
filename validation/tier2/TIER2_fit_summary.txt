@@ -1,0 +1,41 @@
+# Tier 2: RAGNAR forward model fitted to PFS all-sky stacks
+45 fits (visit x spectrograph x arm) with per-v' amplitudes. Pixels dominated by lines with line-specific H2O/O2 absorption are masked, so the fits are insensitive to the assumed PWV (nominal 2 mm); the transmission itself is tested separately with h2o_check.py.
+
+## 1. Fitted parameters (median over spectrographs, with the spread between spectrographs)
+  b 129688: Trot 207.1 K (+-0.7), sigma 0.0851 nm (+-0.0032), sigma slope +0.122, shift -15.8 pm (+-0.5), rms residual / rms line signal 0.075, SMs [1, 2, 3, 4]
+  b 129689: Trot 206.9 K (+-0.9), sigma 0.0861 nm (+-0.0028), sigma slope +0.109, shift -16.0 pm (+-0.1), rms residual / rms line signal 0.071, SMs [1, 2, 4]
+  b 129806: Trot 192.6 K (+-0.3), sigma 0.0847 nm (+-0.0028), sigma slope +0.135, shift -14.8 pm (+-0.2), rms residual / rms line signal 0.072, SMs [1, 2, 3, 4]
+  b 129807: Trot 194.1 K (+-0.5), sigma 0.0848 nm (+-0.0028), sigma slope +0.147, shift -14.8 pm (+-0.2), rms residual / rms line signal 0.075, SMs [1, 2, 3, 4]
+  n 129688: Trot 213.8 K (+-0.9), sigma 0.0974 nm (+-0.0017), sigma slope -0.007, shift -35.1 pm (+-2.0), rms residual / rms line signal 0.114, SMs [1, 2, 3, 4]
+  n 129689: Trot 213.9 K (+-1.7), sigma 0.0972 nm (+-0.0005), sigma slope -0.013, shift -35.0 pm (+-2.3), rms residual / rms line signal 0.131, SMs [1, 2, 4]
+  n 129806: Trot 197.5 K (+-0.8), sigma 0.0967 nm (+-0.0021), sigma slope -0.018, shift -34.6 pm (+-1.9), rms residual / rms line signal 0.126, SMs [1, 2, 3, 4]
+  n 129807: Trot 197.8 K (+-1.2), sigma 0.0966 nm (+-0.0022), sigma slope -0.020, shift -34.6 pm (+-1.9), rms residual / rms line signal 0.126, SMs [1, 2, 3, 4]
+  r 129688: Trot 205.4 K (+-0.3), sigma 0.1072 nm (+-0.0066), sigma slope -0.048, shift -24.2 pm (+-1.1), rms residual / rms line signal 0.131, SMs [1, 2, 3, 4]
+  r 129689: Trot 204.0 K (+-0.3), sigma 0.1088 nm (+-0.0076), sigma slope -0.050, shift -23.8 pm (+-1.3), rms residual / rms line signal 0.128, SMs [1, 2, 4]
+  r 129806: Trot 192.4 K (+-0.3), sigma 0.1074 nm (+-0.0064), sigma slope -0.060, shift -23.5 pm (+-1.1), rms residual / rms line signal 0.184, SMs [1, 2, 3, 4]
+  r 129807: Trot 193.0 K (+-0.3), sigma 0.1075 nm (+-0.0064), sigma slope -0.057, shift -23.6 pm (+-1.1), rms residual / rms line signal 0.180, SMs [1, 2, 3, 4]
+  Wing fraction r_scat with it free (RAGNAR default 0.0125): b: 0.0115 (16-84% 0.0086-0.0201), n: 0.0030 (16-84% 0.0022-0.0071), r: 0.0047 (16-84% 0.0038-0.0059)
+  chi2 improvement from freeing the wing: b: median 0.6%, n: median 6.0%, r: median 1.2%
+
+## 2. Vibrational populations (observed / model per upper level v')
+  Tvib from v' = 3-7, per stack: median 9709 K (16-84% 9617-10672 K)
+  v'=3: observed / (Boltzmann line through v'=3-7) = 1.069 (16-84% 1.008-1.084; n 1.069)
+  v'=4: observed / (Boltzmann line through v'=3-7) = 0.981 (16-84% 0.968-0.996; n 0.988, r 0.976)
+  v'=5: observed / (Boltzmann line through v'=3-7) = 0.984 (16-84% 0.964-1.000; b 1.000, n 0.980, r 0.970)
+  v'=6: observed / (Boltzmann line through v'=3-7) = 0.977 (16-84% 0.953-0.988; n 0.965, r 0.983)
+  v'=7: observed / (Boltzmann line through v'=3-7) = 1.016 (16-84% 0.998-1.090; n 1.009, r 1.083)
+  v'=8: observed / (Boltzmann line through v'=3-7) = 0.880 (16-84% 0.817-1.120; b 1.086, r 0.830)  -> f8 = 1.6 x 0.880 = 1.41
+  v'=9: observed / (Boltzmann line through v'=3-7) = 0.942 (16-84% 0.803-0.983; b 0.924, n 0.984, r 0.865)  -> f9 = 1.4 x 0.942 = 1.32
+
+## 3. Other species relative to OH (observed / model, normalized to the arm's brightest OH level)
+  b: reference OH(v'=9)
+  b NaI: night 1 0.71, night 2 0.68 (spread between stacks 0.02)
+  b OI_green: night 1 0.38, night 2 0.84 (spread between stacks 0.23)
+  b OI_red: night 1 0.59, night 2 1.34 (spread between stacks 0.42)
+  n: reference OH(v'=7)
+  r: reference OH(v'=8)
+  r O2b: night 1 0.57, night 2 1.14 (spread between stacks 0.28)
+
+## 4. Per-band amplitudes within one upper level (band mode), observed / model normalized to the strongest band of that v' in the arm
+  r v'=7: OH(7-2) 0.95, OH(7-3) 1.00
+  r v'=8: OH(8-3) 1.20, OH(8-4) 1.00

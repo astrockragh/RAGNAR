@@ -3,9 +3,11 @@ import numpy as np
 import os.path as osp
 import pandas as pd
 
-def get_O2_at_T(Trot, path = osp.expanduser('~/work/OHspec/make_linelists/data/'), verbose = False):
+DATA_PATH = osp.join(osp.dirname(osp.dirname(osp.abspath(__file__))), 'data') # the data directory shipped next to dev/
+
+def get_O2_at_T(Trot, path = DATA_PATH, verbose = False):
     
-    '''
+    r'''
     Calculates the intensities of the two strong b^1 Sigma_g^+ (0 - 1) / a^1 \Delta_g (0 - 0) bands at a given temperature
     This takes in the intensities from the HITRAN database and adjusts them from the default temperature of 296 K
 
@@ -24,7 +26,7 @@ def get_O2_at_T(Trot, path = osp.expanduser('~/work/OHspec/make_linelists/data/'
     
     # O2 temperatures, should technically be a distribution since the O2 layers are quite broad
     Trots = [160+50*(Trot/180)**4, 160+20*(Trot/190)**4] # the temperatures at the O2 emission layers adjusted from the OH temperature due to the difference in emission heights between the layers
-    dfO2 = pd.read_csv(osp.expanduser(path), engine='python')
+    dfO2 = pd.read_csv(osp.expanduser(path)) # C engine, parses to the same floats as the python engine but much faster
     dfO2['Position'] = 1e7/dfO2['nu'] # go from frequency in Hertz to wavelength in nm
     
     # define physical constants
@@ -62,13 +64,13 @@ def get_O2_at_T(Trot, path = osp.expanduser('~/work/OHspec/make_linelists/data/'
     dfO2.index += 100000 # reindex so that we can easily find these later
     return dfO2
 
-def get_atomic_lines(path = 'data/', verbose = False):
+def get_atomic_lines(path = DATA_PATH, verbose = False):
     ''' Get the atomic lines '''
     path = path+'/atomic_lines.txt'
     if not verbose:
         pd.options.mode.chained_assignment = None
         
-    dfAtomic = pd.read_csv(osp.expanduser(path), engine='python')
+    dfAtomic = pd.read_csv(osp.expanduser(path))
     dfAtomic.index += 200000 # reindex so that we can easily find these later
     return dfAtomic
 
@@ -76,7 +78,7 @@ def get_atomic_lines(path = 'data/', verbose = False):
 ### OH below here ###
 #####################
 
-def get_pgopher_linelist(path = osp.expanduser('~/work/OHspec/make_linelists/data/')):
+def get_pgopher_linelist(path = DATA_PATH):
     '''
         Function to load pgopher line list.
         
@@ -86,7 +88,9 @@ def get_pgopher_linelist(path = osp.expanduser('~/work/OHspec/make_linelists/dat
        Returns DataFrame with relevant transitions from pgopher.
     '''
     path = path + '/pgopher_OH_lines.csv' 
-    A = pd.read_csv(osp.expanduser(path), skiprows=1, skipfooter = 1, engine = 'python') #load dataframa
+    with open(osp.expanduser(path)) as f:
+        nrows = sum(1 for _ in f) - 3 # title line, header and footer line, the C engine doesn't do skipfooter
+    A = pd.read_csv(osp.expanduser(path), skiprows=1, nrows = nrows) #load dataframe
     
     A = A.drop(labels = ["Upper Manifold", "Lower Manifold"], axis = 1) # drop things where everything is the same
     A['Species'] = A['Molecule']
@@ -126,7 +130,17 @@ def get_pgopher_linelist(path = osp.expanduser('~/work/OHspec/make_linelists/dat
     
     return A 
 
-def make_OH_intensities(A, Tr = 190, Tv = 1e4):
+# Hot rotational population per upper vibrational level v' = 0-9 (2026-10).
+# R_HOT is the hot fraction of the total population of each v' (the r in (1-r) exp(-E/kTr)/Q_cold + r exp(-E/kT_hot)/Q_hot).
+# Note Noll+ 2020 (arXiv:2005.06603, Fig. 12) quote r_pop,0, the hot/cold ratio of populations per state at E = 0, which is
+# r_pop,0 = r Q_cold/((1-r) Q_hot), i.e. 10-20x smaller than r. The previous values here (0.3-4.9%) were r_pop,0-like numbers used as r.
+# v' = 4-9: mean of the PFS all-sky fits (two nights, T_hot fixed at Noll's values; validation/tier2) and Noll+ 2020 converted to r,
+# kept non-decreasing with v'. v' = 2: Oliva+ 2015 (r_pop,0 = 0.14% at 12,000 K), v' = 3 interpolated, v' = 0-1 as v' = 2.
+R_HOT = np.array([0.019, 0.019, 0.019, 0.023, 0.027, 0.034, 0.042, 0.058, 0.072, 0.072])
+# T_HOT at Tvib = 1e4 K, non-increasing with v': Noll+ 2020 for v' = 4-9, Oliva+ 2015 for v' = 2, v' = 3 interpolated, v' = 0-1 as v' = 2
+T_HOT = np.array([12000, 12000, 12000, 8900, 6636, 5952, 4544, 2181, 1336, 686])
+
+def make_OH_intensities(A, Tr = 190, Tv = 1e4, r_hot_scale = 1.0):
     '''Function, which given a DataFrame of pgopher lines, will calculate the intensities of each line 
         The intensities are calculated for a given rotational and vibration temperature and column density
         The rotational temperature should be between 180 and 210 K, and the vibrational temperature between 8,000-12,000 K
@@ -135,7 +149,8 @@ def make_OH_intensities(A, Tr = 190, Tv = 1e4):
         Inputs:
         A: Pgopher DataFrame with relevant transitions
         Tr: Rotational Temperature [K]
-        Tv: Vibrational Temperature [K]
+        Tv: Vibrational Temperature [K]. The hot-population temperatures scale with Tv/1e4
+        r_hot_scale: multiplies the hot-population fractions R_HOT, to span the observed variability (0 switches the hot population off)
         --------------------------
         Returns: Array of intensities sorted by by wavelength
         '''
@@ -149,13 +164,14 @@ def make_OH_intensities(A, Tr = 190, Tv = 1e4):
 
     wavs = [] # save wavelengths so that I can sort things correctly later
     Is = [] # save intensities
-    v = A['Eupper']*1e2*h*c/(kB*Tv) #vibrational occupation
+    # vibrational occupation, from the vibrational energy only (the lowest upper level of each v'). Using each line's full Eupper here
+    # counted the rotational energy a second time at Tv, so the cold rotational population came out at 1/(1/Tr + 1/Tv) instead of Tr
+    v = A.groupby("v'")['Eupper'].transform('min')*1e2*h*c/(kB*Tv)
     vibrational_partition_function = np.sum(np.exp(np.unique(-v))) #these sums should be only over unique states
     
-    ## lists of parameters for vibrational groups from 0 - > 9
-    r_hot = np.array([0.3, 0.3, 0.49, 0.63, 0.81, 1.05, 1.17, 1.23, 4.70, 4.91])/100 # from Noll+ 2020, constant extrapolation
-    
-    T_hot = np.array([9500, 8800, 8100, 7400, 6636, 5952, 4544, 2181, 1741, 1019])*(Tv/1e4) #[K], from Noll+ 2020, linearly extrapolated, and scaled to T_vibrational
+    ## parameters for vibrational groups from 0 - > 9, see R_HOT and T_HOT above
+    r_hot = np.clip(R_HOT*r_hot_scale, 0, 0.5)
+    T_hot = T_HOT*(Tv/1e4) #[K], scaled to T_vibrational
 
     for v0 in upper: # split by vibrational upper state to calculate rotational occupation
         mask = A["v'"] == v0 
@@ -182,9 +198,9 @@ def make_OH_intensities(A, Tr = 190, Tv = 1e4):
         
         ## vibrational state 8/9 are overpopulated due to chemistry
         if v0 == 8: 
-            f = 1.60 # ~ 60% overpopulation
-        if v0 == 9:
-            f = 1.40 # ~ 40% overpopulation
+            f = 1.50 # ~ 50% overpopulation. Was 1.60; PFS all-sky stacks (2026-10) give 1.3-1.7 depending on band, ~1.4 overall
+        elif v0 == 9: # this was an if, so the else below reset v' = 8 to f = 1
+            f = 1.35 # ~ 35% overpopulation. Was 1.40; PFS all-sky stacks (2026-10) give ~1.3
         else:
             f = 1
         Is.append(I*f)

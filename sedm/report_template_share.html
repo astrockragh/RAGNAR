@@ -1,0 +1,286 @@
+<title>SEDM Sky Lines at Wendelstein</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the answers first, then the sky, then the evidence for (a) and (b), then limits. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --ink: #12151b; --ink-2: #454c58; --muted: #6a7180; --rule: #dce0e6;
+  --accent: #1d5aa6; --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s1-soft: rgba(42,120,214,.16); --s2-soft: rgba(235,104,52,.55); --hatch: rgba(106,113,128,.10);
+  --ok: #17734a; --ok-bg: #e3f3ea; --warn: #9a5800; --warn-bg: #fbefdc; --bad: #a8261b; --bad-bg: #fbe6e3;
+  --f-display: "Spectral", Georgia, "Times New Roman", serif;
+  --f-body: "Source Sans 3", "Segoe UI", Helvetica, Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1116; --surface: #151a21; --ink: #eef1f5; --ink-2: #b9c0cb; --muted: #8d96a5; --rule: #2a313c;
+  --accent: #8db8ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s1-soft: rgba(57,135,229,.24); --s2-soft: rgba(217,89,38,.6); --hatch: rgba(141,150,165,.10);
+  --ok: #57c690; --ok-bg: #12291f; --warn: #f0a640; --warn-bg: #2d2214; --bad: #f97a6e; --bad-bg: #2f1714; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1116; --surface: #151a21; --ink: #eef1f5; --ink-2: #b9c0cb; --muted: #8d96a5; --rule: #2a313c;
+  --accent: #8db8ff; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s1-soft: rgba(57,135,229,.24); --s2-soft: rgba(217,89,38,.6); --hatch: rgba(141,150,165,.10);
+  --ok: #57c690; --ok-bg: #12291f; --warn: #f0a640; --warn-bg: #2d2214; --bad: #f97a6e; --bad-bg: #2f1714; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--f-body); padding-inline: 20px; padding-block: 40px 64px; }
+main { max-width: 900px; margin: 0 auto; display: grid; gap: 36px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(30px, 5vw, 42px); letter-spacing: -.01em; }
+h2 { font-size: 26px; }
+h3 { font-size: 19px; }
+p { margin: 0; max-width: 68ch; }
+section { display: grid; gap: 16px; }
+.eyebrow { font: 500 12px/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 18px; color: var(--ink-2); }
+header { display: grid; gap: 14px; border-bottom: 1px solid var(--rule); padding-bottom: 28px; }
+i.R { font-family: var(--f-display); font-style: italic; }
+code { font-family: var(--f-mono); font-size: .88em; }
+.answers { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.answer { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.answer h3 { font-size: 20px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 13px/1 var(--f-body); padding: 6px 10px; border-radius: 999px; }
+.chip svg { width: 14px; height: 14px; flex: none; }
+.chip.ok { color: var(--ok); background: var(--ok-bg); } .chip.warn { color: var(--warn); background: var(--warn-bg); } .chip.bad { color: var(--bad); background: var(--bad-bg); }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 8px; max-width: 68ch; }
+figure { margin: 0; display: grid; gap: 10px; }
+figcaption { font-size: 14px; color: var(--ink-2); max-width: 75ch; }
+.chart { position: relative; overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 8px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart.wide svg { min-width: 640px; }
+.pair-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.pair-charts .chart svg { min-width: 300px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--ink-2); padding: 2px 6px 0; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 16px; height: 0; border-top: 3px solid; display: inline-block; }
+.legend i.dash { border-top-style: dashed; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.seg .lbl { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.seg button { font: 500 13px/1 var(--f-body); color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; cursor: pointer; }
+.seg button[aria-pressed="true"] { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+svg text { fill: var(--ink-2); font-family: var(--f-body); font-size: 12px; }
+svg .axis { stroke: var(--muted); stroke-width: 1; }
+svg .grid { stroke: var(--rule); stroke-width: 1; }
+svg .ref { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 4 4; }
+svg .muted { fill: var(--muted); }
+svg .lab { fill: var(--ink-2); font-size: 11.5px; }
+svg .lab.on { fill: var(--ink); font-weight: 600; }
+svg .lab.off { fill: var(--muted); }
+svg .cross { stroke: var(--muted); stroke-width: 1; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 13px; color: var(--ink); box-shadow: 0 2px 10px rgba(0,0,0,.12); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 7px 9px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+th { font-weight: 600; color: var(--ink-2); font-size: 12.5px; vertical-align: bottom; }
+th:first-child, td:first-child { text-align: left; }
+tr:last-child td { border-bottom: 0; }
+tr.sub td { background: var(--hatch); font-weight: 600; color: var(--ink-2); text-align: left; }
+tr.dim td { color: var(--muted); }
+tr.best td { font-weight: 600; }
+td.wrap { white-space: normal; text-align: left; min-width: 220px; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.two-col > div { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.small { font-size: 14px; color: var(--ink-2); }
+details { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 14px 18px; }
+details > summary { cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 19px; }
+details[open] > summary { margin-bottom: 14px; }
+details > div { display: grid; gap: 16px; }
+a { color: var(--accent); }
+</style>
+
+<main>
+<header>
+  <div class="eyebrow">RAGNAR sky simulations · 16 November 2026</div>
+  <h1>SEDM Sky-Line Calibration</h1>
+  <p class="lede">SEDM is being reinstalled at LMU's 2.1 m telescope on the Wendelstein. Can it calibrate (a) its wavelength scale to 1 nm and (b) its relative spectral response from band fluxes measured on the night sky? I simulated the sky at <i class="R">R</i> = λ/FWHM = 75, 100 and 150 over 340–1000 nm, and tested band-flux measurements on <span data-k="nmock"></span> mock observations per resolution.</p>
+  <p class="small">Units: <i class="R">R</i> is resolving power. Line brightness is in rayleigh (R) and spectra are in R nm⁻¹. PWV and zenith distances are for the Wendelstein.</p>
+</header>
+
+<section aria-labelledby="answers">
+  <h2 id="answers" class="eyebrow">Short answers</h2>
+  <div class="answers">
+    <div class="answer">
+      <h3>(a) Wavelength calibration to 1 nm</h3>
+      <div class="chips"><span class="chip ok"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2"/></svg>Yes, 557–890 nm</span><span class="chip warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v6M8 12v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>8-4 band marginal</span><span class="chip bad"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" stroke-width="2"/></svg>Nothing below 557 nm</span></div>
+      <p>Eight sky features from [O I] 557.7 nm to the OH 7-3 band hold their positions to σ ≤ 0.5 nm (most ≤ 0.2 nm). The 8-4 blend at 939 nm scatters by σ = 1.2 nm. A 10% error in the assumed resolution moves the OH blends by 0.2–0.7 nm. In 340–550 nm the brightest airglow feature reaches only <span data-k="blue"></span> R nm⁻¹, against about 10 R nm⁻¹ of dark-sky continuum.</p>
+    </div>
+    <div class="answer">
+      <h3>(b) Relative flux calibration</h3>
+      <div class="chips"><span class="chip warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v6M8 12v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>7-2/7-3: ±7%</span><span class="chip warn"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v6M8 12v1" fill="none" stroke="currentColor" stroke-width="2"/></svg>Needs PWV and a telluric curve</span></div>
+      <p>Two pairs of OH bands from the same vibrational level carry the colour information. From measured band fluxes, 8-3/8-4 gives the response ratio between 729 and 941 nm to ±2% (68%), and 7-2/7-3 the ratio between 686 and 884 nm to ±7%. A smooth response through both comes back to ±1.5–7% over 650–990 nm with about 100 sky spaxels in 30 minutes. 8-4 sits in the 940 nm water band, so PWV must be known to 1–2 mm. 7-2 sits in the O₂ B band, so the background under it must follow the telluric transmission.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="sky">
+  <h2 id="sky">The sky at SEDM resolution</h2>
+  <p>At these resolutions each OH band collapses into one or two smooth humps. Highlight a group to see which parts of the spectrum it makes. Numbers label OH bands (v′–v″).</p>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Resolution" id="ctl-R"><span class="lbl">Resolution</span></div>
+    <div class="seg" role="group" aria-label="Highlight group" id="ctl-G"><span class="lbl">Highlight</span></div>
+  </div>
+  <figure>
+    <div class="chart wide" id="spec"></div>
+    <div class="legend"><span><i style="border-color:var(--s1)"></i>sky lines (top: mean spectrum; bottom: transmission they see)</span><span><i style="border-color:var(--ink-2)"></i>a star's continuum at this resolution</span><span><i style="border-color:var(--rule);border-top-width:8px"></i>range over PWV 0–27 mm and ZD 0–48°</span></div>
+    <figcaption id="speccap"></figcaption>
+  </figure>
+</section>
+
+<section aria-labelledby="wave">
+  <h2 id="wave">(a) Wavelength calibration</h2>
+  <p>Peak positions were measured as in the RAGNAR line lists, with a matched filter of the LSF width, over 1,080 simulated Wendelstein skies at <i class="R">R</i> = 100. σ<sub>λ</sub> is the scatter of each peak. The full range spans the extremes of every parameter at once. The last column gives the shift if the true resolution were 75 or 150.</p>
+  <div class="table-wrap"><table id="wavetab"></table></div>
+</section>
+
+<section aria-labelledby="flux">
+  <h2 id="flux">(b) Relative flux calibration</h2>
+  <p>All lines from one upper vibrational level (v′) share that level's population, which carries all the night-to-night variation in vibrational excitation and chemistry. Between bands of the same level, only the rotational distribution matters: T<sub>rot</sub> and the hot population. Their ratios are set by the Einstein-A branching. Levels v′ = 6–9 each have two or three bands between 610 and 995 nm, and those carry the colour information.</p>
+  <div class="table-wrap"><table id="grouptab"></table></div>
+</section>
+
+</main>
+
+<script>
+const D = /*DATA*/null;
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; if (parent) parent.appendChild(e); return e; }
+const fmt = (v, n = 1) => (v === null || v === undefined) ? '–' : Number(v).toFixed(n);
+const sgn = (v, n = 1) => (v === null || v === undefined) ? '–' : (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(n);
+const setk = (k, v) => document.querySelectorAll(`[data-k="${k}"]`).forEach(e => e.innerHTML = v);
+setk('blue', fmt(D.blue_max, 1)); setk('nmock', D.n_mock);
+
+function tipFor(box) { const t = document.createElement('div'); t.className = 'tip'; t.hidden = true; box.appendChild(t); return t; }
+function placeTip(box, tip, svg, sx, sy, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const r = svg.getBoundingClientRect(), b = box.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+  const px = r.left - b.left + box.scrollLeft + sx * r.width / vb.width, py = r.top - b.top + sy * r.height / vb.height;
+  const w = tip.offsetWidth; let left = px + 12; if (left + w > box.scrollLeft + b.width - 4) left = px - w - 12;
+  tip.style.left = left + 'px'; tip.style.top = Math.max(4, py - 10) + 'px';
+}
+function svgPt(svg, evt) { const p = svg.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY; return p.matrixTransform(svg.getScreenCTM().inverse()); }
+
+/* ---------- Figure 1: the sky and the atmosphere, switchable resolution and highlighted group ---------- */
+(function () {
+  const F = D.fig, TR = D.trans, box = document.getElementById('spec'), cap = document.getElementById('speccap');
+  let state = { R: '100', g: 'none' };
+  try { const s = JSON.parse(localStorage.getItem('sedm-sky') || '{}'); if (F.R[s.R]) state.R = s.R; if (s.g && (s.g === 'none' || F.groups.includes(s.g))) state.g = s.g; } catch (e) {}
+  const ctlR = document.getElementById('ctl-R'), ctlG = document.getElementById('ctl-G');
+  const mk = (parent, val, label, key) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.v = val; b.addEventListener('click', () => { state[key] = val; draw(); }); parent.appendChild(b); return b; };
+  ['75', '100', '150'].forEach(R => mk(ctlR, R, R, 'R'));
+  mk(ctlG, 'none', 'None', 'g');
+  F.groups.forEach(g => mk(ctlG, g, g.replace('v′=', 'v′ ').replace(' 557.7', ' 557').replace(' 630/636', ' 630'), 'g'));
+  const W = 900, H = 520, m = { l: 58, r: 18, t: 76, b: 44 }, x0 = 340, x1 = 1000;
+  const skyBot = 316, trTop = 352, trBot = H - m.b, t0 = 0.3;
+  const X = v => m.l + (v - x0) / (x1 - x0) * (W - m.l - m.r);
+  const Yt = v => trBot - (v - t0) / (1 - t0) * (trBot - trTop);
+  const ABS = [[[360, 420], 'Rayleigh + O₃'], [[560, 610], 'O₃'], [[622, 635], 'O₂ γ'], [[684, 695], 'O₂ B'], [[712, 735], 'H₂O'], [[755, 772], 'O₂ A'], [[805, 840], 'H₂O'], [[900, 980], 'H₂O']];
+  function inGroup(lab, g) { if (g === 'none') return null; if (g.startsWith('v′=')) return lab.band.split('-')[0] === g.slice(3) && /^\d-\d$/.test(lab.band); return lab.band === g; }
+  function poly(svg, xs, ys, attrs) { // a polyline that breaks at nulls
+    let seg = [];
+    const flush = () => { if (seg.length > 1) el('polyline', Object.assign({ points: seg.join(' '), fill: 'none' }, attrs), svg); seg = []; };
+    xs.forEach((x, i) => { if (ys[i] === null) flush(); else seg.push(`${X(x).toFixed(1)},${ys[i].toFixed(1)}`); }); flush();
+  }
+  function draw() {
+    try { localStorage.setItem('sedm-sky', JSON.stringify(state)); } catch (e) {}
+    ctlR.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === state.R));
+    ctlG.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.v === state.g));
+    box.innerHTML = '';
+    const s = F.R[state.R], tr = TR.R[state.R], wav = F.wav;
+    const ymax = Math.ceil(Math.max(...s.hi) * 1.08 / 25) * 25;
+    const Y = v => skyBot - v / ymax * (skyBot - m.t);
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `Simulated night-sky line spectrum at R = ${state.R}, 340 to 1000 nm, with the atmospheric transmission below` }, box);
+    // sky panel
+    el('rect', { x: X(340), y: Y(ymax), width: X(550) - X(340), height: Y(0) - Y(ymax), fill: 'var(--hatch)' }, svg);
+    for (let v = 0; v <= ymax; v += 25) { el('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v), class: 'grid' }, svg); el('text', { x: m.l - 8, y: Y(v) + 4, 'text-anchor': 'end' }, svg, v); }
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(0), y2: Y(0), class: 'axis' }, svg);
+    el('text', { x: 14, y: (m.t + skyBot) / 2, transform: `rotate(-90 14 ${(m.t + skyBot) / 2})`, 'text-anchor': 'middle' }, svg, 'R nm⁻¹');
+    const band = wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.hi[i]).toFixed(1)}`).join(' ') + ' ' + wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.lo[i]).toFixed(1)}`).reverse().join(' ');
+    el('polygon', { points: band, fill: 'var(--s1-soft)' }, svg);
+    if (state.g !== 'none') {
+      const sh = s.share[state.g];
+      el('polygon', { points: `${X(wav[0])},${Y(0)} ` + wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.mean[i] * sh[i]).toFixed(1)}`).join(' ') + ` ${X(wav[wav.length - 1])},${Y(0)}`, fill: 'var(--s2-soft)' }, svg);
+    }
+    el('polyline', { points: wav.map((w, i) => `${X(w).toFixed(1)},${Y(s.mean[i]).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--s1)', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, svg);
+    el('line', { x1: m.l, x2: W - m.r, y1: Y(10), y2: Y(10), class: 'ref' }, svg);
+    el('text', { x: X(345), y: Y(10) - 6, class: 'muted' }, svg, 'dark-sky continuum ≈ 10 R nm⁻¹');
+    el('text', { x: X(445), y: Y(ymax * 0.45), 'text-anchor': 'middle', class: 'muted' }, svg, 'no usable airglow features');
+    const labs = s.labels.slice().sort((a, b) => a.wav - b.wav), merged = [];
+    labs.forEach(l => { const last = merged[merged.length - 1]; if (last && l.wav - last.wav < 9) { last.items.push(l); last.wav = (last.wav + l.wav) / 2; } else merged.push({ wav: l.wav, items: [l] }); });
+    merged.forEach(gp => {
+      const i = Math.round((gp.wav - x0) / 0.5), top = Math.max(...s.hi.slice(Math.max(0, i - 6), i + 7));
+      const on = gp.items.some(l => inGroup(l, state.g)), cls = state.g === 'none' ? 'lab' : (on ? 'lab on' : 'lab off');
+      const yy = Y(top) - 6, xx = X(gp.wav);
+      el('line', { x1: xx, x2: xx, y1: yy, y2: yy - 5, stroke: 'var(--muted)', 'stroke-width': 1 }, svg);
+      el('text', { x: xx + 4, y: yy - 8, transform: `rotate(-90 ${xx + 4} ${yy - 8})`, class: cls }, svg, gp.items.map(l => l.band).join(' + '));
+    });
+    // transmission panel
+    [0.4, 0.6, 0.8, 1.0].forEach(v => { el('line', { x1: m.l, x2: W - m.r, y1: Yt(v), y2: Yt(v), class: 'grid' }, svg); el('text', { x: m.l - 8, y: Yt(v) + 4, 'text-anchor': 'end' }, svg, v.toFixed(1)); });
+    el('line', { x1: m.l, x2: W - m.r, y1: trBot, y2: trBot, class: 'axis' }, svg);
+    el('text', { x: 14, y: (trTop + trBot) / 2, transform: `rotate(-90 14 ${(trTop + trBot) / 2})`, 'text-anchor': 'middle' }, svg, 'Transmission');
+    const rng = wav.map((w, i) => `${X(w).toFixed(1)},${Yt(tr.cont_best[i]).toFixed(1)}`).join(' ') + ' ' + wav.map((w, i) => `${X(w).toFixed(1)},${Yt(tr.cont_worst[i]).toFixed(1)}`).reverse().join(' ');
+    el('polygon', { points: rng, fill: 'var(--rule)', opacity: 0.8 }, svg);
+    el('polyline', { points: wav.map((w, i) => `${X(w).toFixed(1)},${Yt(tr.cont_fid[i]).toFixed(1)}`).join(' '), fill: 'none', stroke: 'var(--ink-2)', 'stroke-width': 1.4 }, svg);
+    poly(svg, wav, tr.lines_fid.map(v => v === null ? null : Yt(Math.max(t0, v))), { stroke: 'var(--s1)', 'stroke-width': 1.6 });
+    ABS.forEach(([[a, b], name]) => {
+      let k = -1, low = 1; wav.forEach((w, i) => { if (w >= a && w <= b) { if (k < 0 || tr.cont_fid[i] < tr.cont_fid[k]) k = i; low = Math.min(low, tr.cont_fid[i], tr.lines_fid[i] === null ? 1 : tr.lines_fid[i]); } });
+      const xx = X(name.startsWith('Rayleigh') ? 395 : wav[k]), yv = name.startsWith('Rayleigh') ? Yt(0.62) : Yt(Math.max(t0, low)) + 14; // below the deepest curve
+      el('text', { x: xx, y: Math.min(trBot - 4, yv), 'text-anchor': 'middle', class: 'lab' }, svg, name);
+    });
+    for (let v = 350; v <= 1000; v += 50) { el('line', { x1: X(v), x2: X(v), y1: trBot, y2: trBot + 5, class: 'axis' }, svg); el('text', { x: X(v), y: trBot + 19, 'text-anchor': 'middle' }, svg, v); el('line', { x1: X(v), x2: X(v), y1: Y(0), y2: Y(0) + 4, class: 'axis' }, svg); }
+    el('text', { x: (m.l + W - m.r) / 2, y: H - 6, 'text-anchor': 'middle' }, svg, 'Wavelength (nm, vacuum)');
+    // hover
+    const cross = el('line', { y1: m.t, y2: trBot, class: 'cross', visibility: 'hidden' }, svg);
+    const dot = el('circle', { r: 4, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2, visibility: 'hidden' }, svg);
+    const tip = tipFor(box);
+    svg.addEventListener('pointermove', e => {
+      const p = svgPt(svg, e), w = x0 + (p.x - m.l) / (W - m.l - m.r) * (x1 - x0);
+      if (w < x0 || w > x1) { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; return; }
+      const i = Math.round((w - x0) / 0.5);
+      cross.setAttribute('x1', X(wav[i])); cross.setAttribute('x2', X(wav[i])); cross.setAttribute('visibility', 'visible');
+      dot.setAttribute('cx', X(wav[i])); dot.setAttribute('cy', Y(s.mean[i])); dot.setAttribute('visibility', 'visible');
+      const top = F.groups.map(g => [g, s.share[g][i]]).sort((a, b) => b[1] - a[1]).filter(x => x[1] >= 0.05).slice(0, 3);
+      placeTip(box, tip, svg, X(wav[i]), Y(Math.min(ymax, s.hi[i])), `<b>${wav[i].toFixed(1)} nm</b> · ${fmt(s.mean[i], 1)} R nm⁻¹ (${fmt(s.lo[i], 1)}–${fmt(s.hi[i], 1)})` + (top.length ? '<br>' + top.map(([g, v]) => `${g}: ${Math.round(100 * v)}%`).join(' · ') : '')
+        + `<br>transmission: star ${fmt(tr.cont_fid[i], 2)} (${fmt(tr.cont_worst[i], 2)}–${fmt(tr.cont_best[i], 2)})` + (tr.lines_fid[i] === null ? '' : `, sky lines ${fmt(tr.lines_fid[i], 2)}`));
+    });
+    svg.addEventListener('pointerleave', () => { cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); tip.hidden = true; });
+    cap.innerHTML = `Top: simulated line emission at <i class="R">R</i> = ${state.R} (no continuum), the mean of ${s.n_spec.toLocaleString('en-US')} Wendelstein-like spectra with the full range shaded.` + (state.g === 'none' ? '' : ` The orange area is the part that comes from ${state.g}.`) + ` Bottom: the atmospheric transmission at PWV 8 mm and ZD 31°, for a star's continuum and as seen by the sky lines (where they are brighter than 0.5 R nm⁻¹), with the main absorption bands labelled. Hover for values.`;
+  }
+  draw();
+})();
+
+/* ---------- wavelength table ---------- */
+(function () {
+  const t = document.getElementById('wavetab');
+  t.innerHTML = '<thead><tr><th>Feature</th><th>λ (nm)</th><th>Peak<br>(R nm⁻¹)</th><th>σ<sub>λ</sub><br>(nm)</th><th>Full range<br>(nm)</th><th>Within<br>1 nm</th><th>Main driver<br>(shift, nm)</th><th>Shift if <i class="R">R</i> =<br>75 / 150 (nm)</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  D.wavecal.forEach(r => {
+    const ok = r.range_nm <= 1 ? 'yes' : (r.sigma_nm <= 0.5 ? 'σ yes, extremes no' : 'no');
+    const tr = document.createElement('tr'); if (r.peak < 3) tr.className = 'dim';
+    tr.innerHTML = `<td>${r.name}</td><td>${fmt(r.wav, 2)}</td><td>${fmt(r.peak, 1)}</td><td>${fmt(r.sigma_nm, 2)}</td><td>${fmt(r.range_nm, 2)}</td><td>${ok}</td><td>${r.driver === '–' ? '–' : `${r.driver.replace(/T_(rot|vib)/, 'T<sub>$1</sub>')} (${sgn(r.driver_shift, 2)})`}</td><td>${sgn(r.dR75, 1)} / ${sgn(r.dR150, 1)}</td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+})();
+
+/* ---------- v' groups ---------- */
+(function () {
+  const names = { '655.0': '6-1', '686.0': '7-2', '728.9': '8-3', '752.7': '4-0', '775.5': '9-4', '787.7': '5-1 + 9-4', '838.3': '6-2', '884.1': '7-3', '936.6': '8-4', '945.0': '8-4', '996.1': '9-5 + 3-0' };
+  const rows = [
+    ["v′ = 9", ['775.5', '996.1'], 'Two bands in range, but 9-5 is half 3-0 at this resolution and 9-3 is under [O I] 630.'],
+    ["v′ = 8", ['728.9', '936.6', '945.0'], 'The cleanest pair, 8-3 and 8-4. 8-4 sits in the 940 nm water band.'],
+    ["v′ = 7", ['686.0', '884.1'], '7-2 and 7-3. 7-2 is weak and sits in the O₂ B band.'],
+    ["v′ = 6", ['655.0', '838.3'], '6-2 is clean. 6-1 is weak and shares its peak with Hα and the 9-3 wings.'],
+    ["v′ = 3–5", ['752.7', '787.7'], 'One band each in range (3-0, 4-0, 5-1). They carry no colour information, but must be in the model.'],
+  ];
+  const f = Object.fromEntries(D.features.map(x => [x.wav.toFixed(1), x]));
+  const t = document.getElementById('grouptab');
+  t.innerHTML = '<thead><tr><th>Level</th><th>Band features at <i class="R">R</i> = 100, nm (share of the peak from that level, worst case)</th><th>Note</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  rows.forEach(([lv, ws, note]) => {
+    const cells = ws.map(w => { const x = f[w]; return x ? `${names[w] || ''} at ${w} (${Math.round(100 * x.f_v)}% ${x.group})` : w; }).join('; ');
+    const tr = document.createElement('tr'); tr.innerHTML = `<td>${lv}</td><td class="wrap">${cells}</td><td class="wrap">${note}</td>`; tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+})();
+
+</script>
