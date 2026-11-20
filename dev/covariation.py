@@ -328,3 +328,50 @@ def linear_sections(wav, Y, threshold = 0.01, lookahead = 3, max_width = 10.0, l
     T['linear'] = (T.E_worst if local else T.E_affine) <= threshold
     T['flux_frac'] = T.flux/m.sum()
     return T, np.vstack(F).T
+
+def linear_windows(wav, Y, min_width = 5.0, max_width = 10.0):
+    '''
+    Every contiguous window with edges at minima of the mean spectrum and a width in [min_width, max_width] nm, with how far it is from
+    changing linearly as one over the simulated spectra (the measures of linear_sections):
+        E_worst: the worst feature's rms residual from the window's single pattern, relative to that feature's own flux
+        E_affine: the same over the whole window (flux weighted); E_prop: whole window, no intercept (fixed shape); mode_frac
+    Returns a DataFrame sorted by E_worst; pick from it, e.g. the best window of a given width for a calibration test.
+    '''
+    Y = np.asarray(Y, dtype = float)
+    ns = len(Y)
+    m = Y.mean(axis = 0)
+    Xc = Y - m
+    colsq = np.sum(Xc**2, axis = 0)
+    mins = np.flatnonzero((m[1:-1] <= m[:-2]) & (m[1:-1] < m[2:])) + 1
+    b = np.r_[0, mins, len(m)]
+    K = len(b) - 1
+    fnorm = np.array([ns*np.sum(m[b[k]:b[k+1]]**2) for k in range(K)])
+    rows = []
+    for k in range(K):
+        G = np.zeros((ns, ns)); Gu = np.zeros((ns, ns))
+        for j in range(k + 1, K + 1):
+            sl = slice(b[j-1], b[j])
+            G += Xc[:, sl] @ Xc[:, sl].T
+            Gu += Y[:, sl] @ Y[:, sl].T
+            width = wav[b[j] - 1] - wav[b[k]]
+            if width > max_width:
+                break
+            if width < min_width:
+                continue
+            ev, V = np.linalg.eigh(G)
+            win = slice(b[k], b[j])
+            res = colsq[win] - (V[:, -1] @ Xc[:, win])**2
+            rf = np.add.reduceat(res, b[k:j] - b[k])
+            fn = fnorm[k:j]
+            evu = np.linalg.eigvalsh(Gu)
+            rows.append(dict(lo = wav[b[k]], hi = wav[b[j] - 1], i0 = b[k], i1 = b[j], n_feat = j - k, flux = float(m[win].sum()),
+                             E_worst = float(np.sqrt(np.max(np.where(fn > 0, np.maximum(rf, 0)/np.where(fn > 0, fn, 1), 0)))),
+                             E_affine = float(np.sqrt(max(0.0, ev.sum() - ev[-1])/fn.sum())),
+                             E_prop = float(np.sqrt(max(0.0, evu.sum() - evu[-1])/fn.sum())),
+                             mode_frac = float(ev[-1]/ev.sum()) if ev.sum() > 0 else 1.0))
+    T = pd.DataFrame(rows)
+    if len(T):
+        T['width'] = T.hi - T.lo
+        T['flux_frac'] = T.flux/m.sum()
+        T = T.sort_values('E_worst', ignore_index = True)
+    return T
