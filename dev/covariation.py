@@ -243,56 +243,77 @@ def bin_spectra(wav_range, specs, lo, hi, pix):
     return centres, Y
 
 def _rank1_residual(G, norm):
-    ''' fractional residual of the best rank-1 fit, from the Gram matrix G of the block and the normalisation sum(mean^2)*Nspec '''
+    """ fractional residual of the best rank-1 fit, from the Gram matrix G of the block and the normalisation sum(mean^2)*Nspec """
     ev = np.linalg.eigvalsh(G)
     return np.sqrt(max(0.0, ev.sum() - ev[-1])/norm)
 
-def linear_sections(wav, Y, threshold = 0.01, lookahead = 3, max_width = 10.0, local = True):
-    '''
-    Split a spectrum into contiguous sections in which all pixels change linearly together over the simulated spectra:
-    within a section, every spectrum is mean(lambda) + a(spectrum)*mode(lambda), up to `threshold`. Section edges sit at local minima of the
-    mean spectrum (features = one peak with its surroundings), so lines are not cut. The split uses the fewest sections; a feature that is
-    not linear even on its own comes out as a single section that fails the threshold (linear = False).
-    The residual of the one-mode fit is the rms over pixels and spectra relative to the rms of the mean spectrum:
-        local = True: for every feature of the section, relative to that feature's own flux, and the worst feature counts (E_worst), so a
-                      bright line cannot carry faint ones that do not follow it
-        local = False: over the whole section (E_affine), i.e. flux weighted
+class _Blocks:
+    """
+    Features of a spectrum (pixels between minima of the mean spectrum, so each holds one peak with its surroundings) and what the
+    one-pattern fit of a window of consecutive features needs.
+    intercept = False: every spectrum is A(spectrum)*shape(lambda) in the window (the same up to a scalar multiplier)
+    intercept = True:  every spectrum is mean(lambda) + a(spectrum)*pattern(lambda)
+    """
+    def __init__(self, wav, Y, intercept):
+        Y = np.asarray(Y, dtype = float)
+        self.ns, self.wav = len(Y), np.asarray(wav, dtype = float)
+        self.m = Y.mean(axis = 0)
+        self.X = Y - self.m if intercept else Y
+        self.colsq = np.sum(self.X**2, axis = 0)
+        mins = np.flatnonzero((self.m[1:-1] <= self.m[:-2]) & (self.m[1:-1] < self.m[2:])) + 1
+        self.b = np.r_[0, mins, len(self.m)] # feature k is pixels b[k]:b[k+1]
+        self.K = len(self.b) - 1
+        self.fnorm = np.array([self.ns*np.sum(self.m[self.b[k]:self.b[k+1]]**2) for k in range(self.K)])
+        self.fsum = np.array([np.sum(self.m[self.b[k]:self.b[k+1]]) for k in range(self.K)]) # mean line flux of each feature
+        pix = np.median(np.diff(self.wav)) if len(self.wav) > 1 else 0.0
+        self.edges = np.r_[self.wav[self.b[:-1]] - pix/2, self.wav[-1] + pix/2] # feature edges [nm]
+
+    def gram(self, k):
+        sl = slice(self.b[k], self.b[k+1])
+        return self.X[:, sl] @ self.X[:, sl].T
+
+    def shares(self, k, j):
+        return self.fsum[k:j]/max(self.fsum[k:j].sum(), 1e-300)
+
+    def residuals(self, k, j, G, min_frac = 0.0):
+        """
+        E_worst: for each feature, the rms of the fit residual over its pixels and all spectra, divided by the rms of its mean spectrum;
+                 the largest of these among the features holding at least min_frac of the window's line flux (line wings and faint bumps
+                 between lines are tiny features whose relative residual says nothing about the window)
+        E_window: the same over the whole window (flux weighted, bright features dominate)
+        """
+        ev, V = np.linalg.eigh(G)
+        win = slice(self.b[k], self.b[j])
+        res = self.colsq[win] - (V[:, -1] @ self.X[:, win])**2
+        rf = np.add.reduceat(res, self.b[k:j] - self.b[k])
+        fn = self.fnorm[k:j]
+        use = (fn > 0) & (self.shares(k, j) >= min_frac)
+        worst = np.sqrt(np.max(np.where(use, np.maximum(rf, 0)/np.where(fn > 0, fn, 1), 0)))
+        return float(worst), float(np.sqrt(max(0.0, ev.sum() - ev[-1])/max(fn.sum(), 1e-300)))
+
+def linear_sections(wav, Y, threshold = 0.01, lookahead = 3, max_width = 10.0, local = True, intercept = False, min_feature_frac = 0.02):
+    """
+    Split a spectrum into contiguous sections in which every feature is the same in all simulated spectra up to one scalar multiplier per
+    spectrum (intercept = False, the default): Y_s(lambda) = A_s*shape(lambda) to within `threshold`. With intercept = True the test is the
+    looser mean + a_s*pattern. Section edges sit at local minima of the mean spectrum (features = one peak with its surroundings), so lines
+    are not cut. The split uses the fewest sections; a feature that fails even on its own comes out as a single section (linear = False).
+        local = True: the worst feature counts (E_worst, see _Blocks.residuals), so a bright line cannot carry faint ones that do not follow
+        local = False: the whole section counts (E_window)
+        min_feature_frac: features with less of the section's line flux than this do not count for E_worst
     Inputs:
-        wav, Y: pixel centres [nm] and (Nspec, Npix) spectra on them (line-only; a continuum that is the same in every spectrum changes nothing)
+        wav, Y: pixel centres [nm] and (Nspec, Npix) line-only spectra on them (the continuum is left out of the test)
         lookahead: features to keep adding after the threshold is first exceeded, in case the next ones bring the residual back down
         max_width: longest section to consider [nm]
-    Returns a DataFrame of sections (lo, hi, i0, i1 pixel range, n_feat, flux, E_worst, E_affine, E_prop, mode_frac, linear, flux_frac) and
-    the per-spectrum flux of each section (Nspec, Nsec), for comparing sections with each other (linear_scatter on it).
-    E_prop is the whole-section residual without the intercept (shape fixed, only the scale changing); mode_frac the variance in the mode.
-    '''
-    Y = np.asarray(Y, dtype = float)
-    ns = len(Y)
-    m = Y.mean(axis = 0)
-    Xc = Y - m
-    colsq = np.sum(Xc**2, axis = 0)
-    mins = np.flatnonzero((m[1:-1] <= m[:-2]) & (m[1:-1] < m[2:])) + 1
-    b = np.r_[0, mins, len(m)] # feature k is pixels b[k]:b[k+1]
-    K = len(b) - 1
-    fnorm = np.array([ns*np.sum(m[b[k]:b[k+1]]**2) for k in range(K)])
-
-    def residuals(k, j, G):
-        ''' (E_worst, E_affine) of the section of features k..j-1 with Gram matrix G '''
-        ev, V = np.linalg.eigh(G)
-        u = V[:, -1]
-        win = slice(b[k], b[j])
-        res = colsq[win] - (u @ Xc[:, win])**2
-        rf = np.add.reduceat(res, b[k:j] - b[k])
-        fn = fnorm[k:j]
-        worst = np.sqrt(np.max(np.where(fn > 0, np.maximum(rf, 0)/np.where(fn > 0, fn, 1), 0)))
-        return worst, np.sqrt(max(0.0, ev.sum() - ev[-1])/max(fn.sum(), 1e-300))
-
-    ok = [dict() for _ in range(K)] # ok[k][j]: residual of the section of features k..j-1
-    for k in range(K):
-        G = np.zeros((ns, ns)); bad = 0
-        for j in range(k + 1, K + 1):
-            sl = slice(b[j-1], b[j])
-            G += Xc[:, sl] @ Xc[:, sl].T
-            worst, glob = residuals(k, j, G)
+    Returns a DataFrame of sections (lo, hi, i0, i1, n_feat, flux, E_worst, E_window, E_affine (whole window with an intercept), mode_frac,
+    linear, flux_frac, edges) and the per-spectrum flux of each section (Nspec, Nsec), for comparing sections with each other.
+    """
+    B = _Blocks(wav, Y, intercept)
+    ok = [dict() for _ in range(B.K)]
+    for k in range(B.K):
+        G = np.zeros((B.ns, B.ns)); bad = 0
+        for j in range(k + 1, B.K + 1):
+            G += B.gram(j - 1)
+            worst, glob = B.residuals(k, j, G, min_feature_frac)
             E = worst if local else glob
             if E <= threshold or j == k + 1:
                 ok[k][j] = E
@@ -302,76 +323,63 @@ def linear_sections(wav, Y, threshold = 0.01, lookahead = 3, max_width = 10.0, l
                     break
             else:
                 bad = 0
-            if wav[b[j] - 1] - wav[b[k]] > max_width:
+            if B.wav[B.b[j] - 1] - B.wav[B.b[k]] > max_width:
                 break
-    # fewest sections covering every feature (a feature that fails on its own is allowed as a section of its own)
-    best = np.full(K + 1, np.inf); prev = np.zeros(K + 1, dtype = int); best[0] = 0
-    for j in range(1, K + 1):
+    best = np.full(B.K + 1, np.inf); prev = np.zeros(B.K + 1, dtype = int); best[0] = 0
+    for j in range(1, B.K + 1):
         for k in range(j):
             if j in ok[k] and (ok[k][j] <= threshold or j == k + 1) and best[k] + 1 < best[j]:
                 best[j], prev[j] = best[k] + 1, k
-    cuts, j = [], K
+    cuts, j = [], B.K
     while j > 0:
         cuts.append((prev[j], j)); j = prev[j]
+    Yr = np.asarray(Y, dtype = float); Xc = Yr - B.m
     rows, F = [], []
     for k, j in cuts[::-1]:
-        i0, i1 = b[k], b[j]
-        B = Y[:, i0:i1]
+        i0, i1 = B.b[k], B.b[j]
+        G = sum(B.gram(q) for q in range(k, j))
+        worst, glob = B.residuals(k, j, G, min_feature_frac)
         Gc = Xc[:, i0:i1] @ Xc[:, i0:i1].T
-        worst, glob = residuals(k, j, Gc)
         ev = np.linalg.eigvalsh(Gc)
-        rows.append(dict(lo = wav[i0], hi = wav[i1 - 1], i0 = i0, i1 = i1, n_feat = j - k, flux = float(m[i0:i1].sum()),
-                         E_worst = worst, E_affine = glob, E_prop = _rank1_residual(B @ B.T, fnorm[k:j].sum()),
-                         mode_frac = float(ev[-1]/ev.sum()) if ev.sum() > 0 else 1.0))
-        F.append(B.sum(axis = 1))
+        rows.append(dict(lo = B.wav[i0], hi = B.wav[i1 - 1], i0 = i0, i1 = i1, n_feat = j - k, n_feat_counted = int(np.sum(B.shares(k, j) >= min_feature_frac)),
+                         flux = float(B.m[i0:i1].sum()),
+                         E_worst = worst, E_window = glob, E_affine = _rank1_residual(Gc, B.fnorm[k:j].sum()),
+                         mode_frac = float(ev[-1]/ev.sum()) if ev.sum() > 0 else 1.0, edges = np.round(B.edges[k:j+1], 4).tolist()))
+        F.append(Yr[:, i0:i1].sum(axis = 1))
     T = pd.DataFrame(rows)
-    T['linear'] = (T.E_worst if local else T.E_affine) <= threshold
-    T['flux_frac'] = T.flux/m.sum()
+    T['linear'] = (T.E_worst if local else T.E_window) <= threshold
+    T['flux_frac'] = T.flux/B.m.sum()
     return T, np.vstack(F).T
 
-def linear_windows(wav, Y, min_width = 5.0, max_width = 10.0):
-    '''
-    Every contiguous window with edges at minima of the mean spectrum and a width in [min_width, max_width] nm, with how far it is from
-    changing linearly as one over the simulated spectra (the measures of linear_sections):
-        E_worst: the worst feature's rms residual from the window's single pattern, relative to that feature's own flux
-        E_affine: the same over the whole window (flux weighted); E_prop: whole window, no intercept (fixed shape); mode_frac
-    Returns a DataFrame sorted by E_worst; pick from it, e.g. the best window of a given width for a calibration test.
-    '''
-    Y = np.asarray(Y, dtype = float)
-    ns = len(Y)
-    m = Y.mean(axis = 0)
-    Xc = Y - m
-    colsq = np.sum(Xc**2, axis = 0)
-    mins = np.flatnonzero((m[1:-1] <= m[:-2]) & (m[1:-1] < m[2:])) + 1
-    b = np.r_[0, mins, len(m)]
-    K = len(b) - 1
-    fnorm = np.array([ns*np.sum(m[b[k]:b[k+1]]**2) for k in range(K)])
+def linear_windows(wav, Y, min_width = 5.0, max_width = 10.0, intercept = False, min_feature_frac = 0.02):
+    """
+    Every contiguous window with edges at minima of the mean spectrum and a width in [min_width, max_width] nm, with how far its features
+    are from being the same in all simulated spectra up to one scalar multiplier per spectrum (intercept = False; with True, mean + a*pattern):
+        E_worst: the worst feature's rms residual (over its pixels and all spectra) relative to the rms of its own mean spectrum, among the
+                 features with at least min_feature_frac of the window's line flux
+        E_window: the same over the whole window (flux weighted)
+    Returns a DataFrame sorted by E_worst, with the feature edges [nm] and flux shares of each window (to measure the same features in data).
+    """
+    B = _Blocks(wav, Y, intercept)
     rows = []
-    for k in range(K):
-        G = np.zeros((ns, ns)); Gu = np.zeros((ns, ns))
-        for j in range(k + 1, K + 1):
-            sl = slice(b[j-1], b[j])
-            G += Xc[:, sl] @ Xc[:, sl].T
-            Gu += Y[:, sl] @ Y[:, sl].T
-            width = wav[b[j] - 1] - wav[b[k]]
+    for k in range(B.K):
+        G = np.zeros((B.ns, B.ns))
+        for j in range(k + 1, B.K + 1):
+            G += B.gram(j - 1)
+            width = B.wav[B.b[j] - 1] - B.wav[B.b[k]]
             if width > max_width:
                 break
             if width < min_width:
                 continue
-            ev, V = np.linalg.eigh(G)
-            win = slice(b[k], b[j])
-            res = colsq[win] - (V[:, -1] @ Xc[:, win])**2
-            rf = np.add.reduceat(res, b[k:j] - b[k])
-            fn = fnorm[k:j]
-            evu = np.linalg.eigvalsh(Gu)
-            rows.append(dict(lo = wav[b[k]], hi = wav[b[j] - 1], i0 = b[k], i1 = b[j], n_feat = j - k, flux = float(m[win].sum()),
-                             E_worst = float(np.sqrt(np.max(np.where(fn > 0, np.maximum(rf, 0)/np.where(fn > 0, fn, 1), 0)))),
-                             E_affine = float(np.sqrt(max(0.0, ev.sum() - ev[-1])/fn.sum())),
-                             E_prop = float(np.sqrt(max(0.0, evu.sum() - evu[-1])/fn.sum())),
-                             mode_frac = float(ev[-1]/ev.sum()) if ev.sum() > 0 else 1.0))
+            worst, glob = B.residuals(k, j, G, min_feature_frac)
+            win = slice(B.b[k], B.b[j])
+            sh = B.shares(k, j)
+            rows.append(dict(lo = B.wav[B.b[k]], hi = B.wav[B.b[j] - 1], i0 = B.b[k], i1 = B.b[j], n_feat = j - k, n_feat_counted = int(np.sum(sh >= min_feature_frac)),
+                             flux = float(B.m[win].sum()), E_worst = worst, E_window = glob, edges = np.round(B.edges[k:j+1], 4).tolist(),
+                             feat_frac = np.round(sh, 4).tolist()))
     T = pd.DataFrame(rows)
     if len(T):
         T['width'] = T.hi - T.lo
-        T['flux_frac'] = T.flux/m.sum()
+        T['flux_frac'] = T.flux/B.m.sum()
         T = T.sort_values('E_worst', ignore_index = True)
     return T

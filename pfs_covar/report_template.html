@@ -271,7 +271,7 @@ T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz',
 <section class="stack" id="linear">
   <div class="prose stack">
     <h2>Sections that change linearly together</h2>
-    <p>For calibration tests that need a stretch of spectrum that moves as one. Within a section, every simulated sky is the mean spectrum plus one amplitude times one fixed pattern. Every feature in the section (one peak with its surroundings) has to follow that pattern to within the tolerance of its own flux, so a bright line cannot carry faint ones that do not follow it. The skies are the 120 per arm at the nominal LSF (Trot, Tvib, hot population, chemistry and PWV vary). Edges sit at minima of the mean spectrum, so no line is cut. The split uses the fewest sections. A <i>proportional</i> section also has no intercept: its shape stays fixed and only its scale changes.</p>
+    <p>For calibration tests that need a stretch of spectrum in which every feature is the same in all skies up to one scalar multiplier per sky, the continuum aside. Each section is fitted as A(sky) × shape(λ). For every feature (one peak with its surroundings, between two minima of the mean spectrum) the residual is the rms over its pixels and all skies, divided by the rms of its own mean line spectrum. The <b>worst feature</b> is the largest of these in the section and has to be below the tolerance, so a bright line cannot carry other lines that change differently. Features with less than 2% of the section's line flux do not count: they are line wings and faint bumps between lines whose relative residual says nothing about the section. A section that one line dominates passes trivially (the 557.7 nm region in b), so the tables count the features that do count. The <b>whole-window</b> value is the same rms over all pixels at once, which bright features dominate. The skies are the 120 per arm at the nominal LSF (Trot, Tvib, hot population, chemistry and PWV vary), line-only. The split uses the fewest sections.</p>
     <p id="secSummary"></p>
   </div>
   <div class="figure">
@@ -279,7 +279,7 @@ T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz',
       <div><span class="ctl-label">Tolerance</span><span class="seg" id="segTh"><button type="button" data-v="1">1%</button><button type="button" data-v="2">2%</button><button type="button" data-v="5">5%</button></span></div>
       <div><span class="ctl-label">Arm</span><span class="seg" id="segArm"><button type="button" data-v="b">b</button><button type="button" data-v="r">r</button><button type="button" data-v="n">n</button><button type="button" data-v="m">m</button></span></div>
     </div>
-    <div class="panel"><h4>Whole arm</h4><div class="sub">Click to move the detail window. Bars: linear sections with two or more features.</div><canvas id="secOver" style="width:100%;height:90px;display:block;cursor:pointer"></canvas></div>
+    <div class="panel"><h4>Whole arm</h4><div class="sub">Click to move the detail window. Bars: passing sections with two or more features that count.</div><canvas id="secOver" style="width:100%;height:90px;display:block;cursor:pointer"></canvas></div>
     <div class="panel"><h4 id="secDetailTitle">Detail</h4><div class="sub">Mean simulated sky (line-only, log scale) with ±1σ over the skies. Hover a section for its numbers.</div><canvas id="secDetail" style="width:100%;height:280px;display:block"></canvas></div>
     <div class="legend" id="secLegend"></div>
   </div>
@@ -289,8 +289,8 @@ T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz',
   </div>
   <div class="figure">
       <h3>Sections</h3>
-      <div class="controls"><label class="chk"><input type="checkbox" id="secMulti" checked> Two or more features only</label><span class="muted" id="secCount"></span></div>
-      <div class="scroll" style="max-height:440px"><table id="secList"><thead><tr><th class="n">λ range [nm]</th><th class="n">Width</th><th class="n">Feat.</th><th>Mostly</th><th class="n">Worst</th><th>Shape</th><th class="n">Family</th><th>Driven by</th></tr></thead><tbody></tbody></table></div>
+      <div class="controls"><label class="chk"><input type="checkbox" id="secMulti" checked> Two or more features that count</label><span class="muted" id="secCount"></span></div>
+      <div class="scroll" style="max-height:440px"><table id="secList"><thead><tr><th class="n">λ range [nm]</th><th class="n">Width</th><th class="n">Counted</th><th>Mostly</th><th class="n">Worst feature</th><th class="n">Whole window</th><th class="n">Family</th><th>Driven by</th></tr></thead><tbody></tbody></table></div>
   <div class="figure">
       <h3>Sections that also move with each other</h3>
       <p class="cap">Linear sections of all four arms (the runs simulated the same skies). A cell shows how far the two sections' fluxes are from a straight line with each other. Dark blocks are families: sections anywhere in the spectrum that change linearly together. Click a cell for the family.</p>
@@ -306,16 +306,36 @@ T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz',
       <li class="warn"><span>The fix4 grid has two values each of Trot and Tvib. A section is tested through the way the parameters combine, but curvature along a single parameter is not visible with two values. A denser grid (and independent species draws) would make the sections safer for a test on many exposures.</span></li>
       <li><span>A continuum that is the same in every exposure only shifts the intercept. A changing one (moonlight, twilight) adds a second pattern in real data, so subtract a local baseline first or give the continuum its own term.</span></li>
       <li><span>The LSF is held at its nominal width. If the test spans LSF changes (fibres, spectrographs), a single feature stays linear but neighbours can stop following each other.</span></li>
-      <li class="warn"><span>The two-night PFS data cannot test this. With two sky states any change is a straight line. It takes three or more clearly different skies, such as a night's sequence of visits.</span></li>
+      <li><span>Two sky states are enough to test it: a shape change between them is visible. The 5–10 nm windows below are tested on the PFS data.</span></li>
     </ul>
   </div>
 </section>
+
+<section class="stack" id="windows">
+  <div class="prose stack">
+    <h2>5–10 nm windows, model and data</h2>
+    <p>Every window 5–10 nm wide with edges at minima of the mean spectrum, holding at least 1% of the arm's line flux and at most 10% of its line intensity in H₂O or O₂ absorption. The test is the one above: every feature the same up to one scalar per sky. The model number spans RAGNAR's 120 skies. The data number is the same measure for what was observed. Per spectrograph, each exposure is fitted as A × one common line shape, plus a linear continuum (not part of the test) and a small wavelength shift; the residual has the noise taken out.</p>
+    <p id="winText">Over RAGNAR's 120 skies no 5–10 nm window is the same up to a scalar to better than about 7% in its worst counted feature: any window that wide spans several rotational levels, and Trot 180–210 K moves their ratios. Between the two observed nights, which differ less than the grid, the best windows changed by 2–5% in the worst feature and 1.4–2.2% over the whole window, against 0.2–1.2% within a night. The m data (9 minutes, 60 s visits) show no change beyond the noise in any window, so they test nothing. Over the full m arm the best window is the same 7-3 P-branch stretch as in r, 883.2–892.7 nm (model 6.9% worst, 3.0% whole window), which the r data test below covers.</p>
+  </div>
+  <div class="figure">
+    <h3>Observed shape change against RAGNAR's prediction</h3>
+    <p class="cap">One point per window, worst feature. Low-resolution arms: night 1 → night 2. m: six visits within 9 minutes; points on the bottom axis show no change beyond the noise. The dashed line is the median of the same measure within one night (two visits 16 minutes apart), the instrumental floor. Ringed points are the best windows by both numbers.</p>
+    <div class="panels two" id="winPanels"></div>
+  </div>
+  <div class="figure">
+    <h3>Best windows per arm</h3>
+    <p class="cap">Ranked by the larger of the two worst-feature numbers, so a window has to be good in the model and in the data. Non-overlapping.</p>
+    <div class="tbl-wrap"><table id="winTable"></table></div>
+  </div>
+</section>
+
 </div>
 
 <div class="tip" id="tip" hidden></div>
 
 <script type="application/json" id="data">/*DATA*/</script>
 <script type="application/json" id="secdata">/*SECTIONS*/</script>
+<script type="application/json" id="windata">/*WINDOWS*/</script>
 <script>
 (async function () {
 const REP = JSON.parse(document.getElementById('data').textContent);
@@ -679,16 +699,17 @@ async function famMat(th) {
 }
 for (const th in SEC.families) await famMat(th);
 function secSummary() {
-  let h = '<thead><tr><th>Arm</th><th>Tolerance</th><th class="n">Linear sections</th><th class="n">2+ features</th><th class="n">Share of the flux</th><th class="n">Median width</th><th class="n">Widest</th><th class="n">Proportional too</th></tr></thead><tbody>';
+  let h = '<thead><tr><th>Arm</th><th>Tolerance</th><th class="n">Passing sections</th><th class="n">With 2+ counted features</th><th class="n">Share of the flux</th><th class="n">Median width</th><th class="n">Widest with 2+ counted</th></tr></thead><tbody>';
   for (const arm of ARMS) for (const th of ['1', '2', '5']) {
-    const L = SROWS[th].filter(r => r.arm === arm && r.linear), w = L.map(r => r.hi - r.lo).sort((a, b) => a - b);
-    h += `<tr${th === secState.th && arm === secState.arm ? ' class="hl"' : ''}><td>${th === '1' ? arm : ''}</td><td>${th}%</td><td class="n">${L.length}</td><td class="n">${L.filter(r => r.n_feat > 1).length}</td><td class="n">${pct(L.reduce((a, r) => a + r.flux_frac, 0), 0)}</td><td class="n">${w.length ? w[w.length >> 1].toFixed(2) : ''} nm</td><td class="n">${w.length ? w[w.length - 1].toFixed(1) : ''} nm</td><td class="n">${L.filter(r => r.E_prop <= Number(th) / 100).length}</td></tr>`; }
+    const L = SROWS[th].filter(r => r.arm === arm && r.linear), w = L.map(r => r.hi - r.lo).sort((a, b) => a - b), w2 = L.filter(r => r.n_feat_counted > 1).map(r => r.hi - r.lo).sort((a, b) => a - b);
+    h += `<tr${th === secState.th && arm === secState.arm ? ' class="hl"' : ''}><td>${th === '1' ? arm : ''}</td><td>${th}%</td><td class="n">${L.length}</td><td class="n">${L.filter(r => r.n_feat_counted > 1).length}</td><td class="n">${pct(L.reduce((a, r) => a + r.flux_frac, 0), 0)}</td><td class="n">${w.length ? w[w.length >> 1].toFixed(2) : ''} nm</td><td class="n">${w2.length ? w2[w2.length - 1].toFixed(1) + ' nm' : '–'}</td></tr>`; }
   $('#secTable').innerHTML = h + '</tbody>';
-  const all1 = SROWS['1'].filter(r => r.linear), multi1 = all1.filter(r => r.n_feat > 1), all5 = SROWS['5'].filter(r => r.linear);
+  const all1 = SROWS['1'].filter(r => r.linear), multi1 = all1.filter(r => r.n_feat_counted > 1), all5 = SROWS['5'].filter(r => r.linear && r.n_feat_counted > 1);
   const wid = a => Math.max(...a.map(r => r.hi - r.lo));
-  $('#secSummary').innerHTML = `At 1%, almost every resolved feature is linear on its own (${all1.length} sections hold ${pct(all1.reduce((a, r) => a + r.flux_frac, 0) / 4, 0)} of the flux, averaged over the arms), but neighbours rarely join: ${multi1.length} sections have two or more features, the widest ${wid(multi1).toFixed(1)} nm. Neighbours join when they come from one v′ with nearby J′, often one upper state in two branches. At 5% sections reach ${wid(all5).toFixed(0)} nm: high-J v′ = 9 lines in the blue, which move with Tvib, and the O₂ b band at 863–867 nm. Sections far apart in the spectrum, and in different arms, often move linearly with each other (right-hand matrix).`;
+  const w5 = ARMS.map(a => { const q = all5.filter(r => r.arm === a).sort((x, y) => (y.hi - y.lo) - (x.hi - x.lo))[0]; return q ? `${a} ${q.lo.toFixed(1)}–${q.hi.toFixed(1)} nm (${q.mostly})` : ''; }).join(', ');
+  $('#secSummary').innerHTML = `At 1%, most resolved features pass on their own (${all1.length} sections hold ${pct(all1.reduce((a, r) => a + r.flux_frac, 0) / 4, 0)} of the flux, averaged over the arms), but neighbours rarely join: ${multi1.length} sections have two or more features, the widest ${wid(multi1).toFixed(1)} nm. Neighbours join when they come from one v′ with nearby J′, often one upper state in two branches. Even at 5% the widest sections are ${wid(all5).toFixed(1)} nm: ${w5}. Sections far apart in the spectrum, and in different arms, often scale together (right-hand matrix).`;
 }
-function secColor(r) { return !r.linear ? ['--bad', 0.16] : r.n_feat > 1 ? ['--s1', 0.42] : ['--s1', 0.13]; }
+function secColor(r) { return !r.linear ? ['--bad', 0.16] : r.n_feat_counted > 1 ? ['--s1', 0.42] : ['--s1', 0.13]; }
 function rgba(v, a) { const [r, g, b] = hex(tok(v)); return `rgba(${r},${g},${b},${a})`; }
 function fitCanvas(cv) { const d = devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight; cv.width = Math.round(w * d); cv.height = Math.round(h * d); const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); return [c, w, h]; }
 function drawSpec(cv, lo, hi, opts) {
@@ -699,7 +720,7 @@ function drawSpec(cv, lo, hi, opts) {
   let ymax = 0; for (let i = i0; i < i1; i++) ymax = Math.max(ymax, sp.mean[i] + sp.sd[i]);
   const ylo = Math.max(ymax * 1e-4, 1e-4), Y = v => H - pad.b - (Math.log10(Math.max(v, ylo)) - Math.log10(ylo)) / (Math.log10(ymax * 1.3) - Math.log10(ylo)) * (H - pad.t - pad.b);
   c.clearRect(0, 0, W, H);
-  if (!opts.axes) rows.forEach(r => { if (r.linear && r.n_feat > 1) { c.fillStyle = rgba('--s1', 0.9); c.fillRect(X(r.lo), H - 6, Math.max(1.5, X(r.hi) - X(r.lo)), 5); } });
+  if (!opts.axes) rows.forEach(r => { if (r.linear && r.n_feat_counted > 1) { c.fillStyle = rgba('--s1', 0.9); c.fillRect(X(r.lo), H - 6, Math.max(1.5, X(r.hi) - X(r.lo)), 5); } });
   if (opts.axes) rows.forEach(r => { const [v, a] = secColor(r); c.fillStyle = rgba(v, a); c.fillRect(X(r.lo), pad.t, Math.max(1, X(r.hi) - X(r.lo)), H - pad.t - pad.b);
     c.strokeStyle = rgba('--fg-3', 0.5); c.lineWidth = 1; c.beginPath(); c.moveTo(X(r.lo), pad.t); c.lineTo(X(r.lo), H - pad.b); c.stroke(); });
   if (opts.axes) { c.fillStyle = rgba('--fg-3', 0.18); c.beginPath();
@@ -721,11 +742,11 @@ function renderSections() {
   drawSpec($('#secOver'), sp.wav[0], sp.wav.at(-1), { axes: false, window: [lo, hi] });
   secGeo = drawSpec($('#secDetail'), lo, hi, { axes: true });
   $('#secDetailTitle').textContent = `${secState.arm} arm, ${lo.toFixed(1)}–${hi.toFixed(1)} nm, tolerance ${secState.th}%`;
-  $('#secLegend').innerHTML = `<span><span class="sw" style="background:${rgba('--s1', 0.42)}"></span>linear, 2+ features</span><span><span class="sw" style="background:${rgba('--s1', 0.13)}"></span>linear, one feature</span><span><span class="sw" style="background:${rgba('--bad', 0.16)}"></span>not linear at this tolerance</span>`;
-  const multi = $('#secMulti').checked, L = SROWS[secState.th].filter(r => r.arm === secState.arm && r.linear && (!multi || r.n_feat > 1)).sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo));
+  $('#secLegend').innerHTML = `<span><span class="sw" style="background:${rgba('--s1', 0.42)}"></span>passes, 2+ features that count</span><span><span class="sw" style="background:${rgba('--s1', 0.13)}"></span>passes, one feature that counts</span><span><span class="sw" style="background:${rgba('--bad', 0.16)}"></span>fails at this tolerance</span>`;
+  const multi = $('#secMulti').checked, L = SROWS[secState.th].filter(r => r.arm === secState.arm && r.linear && (!multi || r.n_feat_counted > 1)).sort((a, b) => (b.hi - b.lo) - (a.hi - a.lo));
   $('#secCount').textContent = `${L.length} sections`;
   const tb = $('#secList tbody'); tb.innerHTML = '';
-  L.forEach(r => { const tr = el('tr', {}, `<td class="n">${r.lo.toFixed(2)}–${r.hi.toFixed(2)}</td><td class="n">${(r.hi - r.lo).toFixed(2)}</td><td class="n">${r.n_feat}</td><td>${r.mostly || '–'}</td><td class="n">${pct(r.E_worst, 2)}</td><td>${r.E_prop <= Number(secState.th) / 100 ? 'proportional' : 'with intercept'}</td><td class="n">${r.family_n > 1 ? r.family_n : '–'}</td><td class="mono" style="font-size:11px">${r.driver1}</td>`);
+  L.forEach(r => { const tr = el('tr', {}, `<td class="n">${r.lo.toFixed(2)}–${r.hi.toFixed(2)}</td><td class="n">${(r.hi - r.lo).toFixed(2)}</td><td class="n">${r.n_feat_counted}</td><td>${r.mostly || '–'}</td><td class="n">${pct(r.E_worst, 2)}</td><td class="n">${pct(r.E_window, 2)}</td><td class="n">${r.family_n > 1 ? r.family_n : '–'}</td><td class="mono" style="font-size:11px">${r.driver1}</td>`);
     tr.style.cursor = 'pointer'; tr.onclick = () => { secState.centre = (r.lo + r.hi) / 2; renderSections(); $('#secDetail').scrollIntoView({ behavior: 'smooth', block: 'center' }); }; tb.append(tr); });
   secSummary();
 }
@@ -733,7 +754,7 @@ $('#secOver').addEventListener('click', e => { const sp = SEC.spec[secState.arm]
 $('#secDetail').addEventListener('pointermove', e => { if (!secGeo) return; const r = e.currentTarget.getBoundingClientRect(), x = e.clientX - r.left;
   const w = secGeo.lo + (x - secGeo.pad.l) / (secGeo.W - secGeo.pad.l - secGeo.pad.r) * (secGeo.hi - secGeo.lo), s = secGeo.rows.find(q => w >= q.lo && w <= q.hi);
   if (!s) { hideTip(); return; }
-  showTip(`<b>${s.lo.toFixed(2)}–${s.hi.toFixed(2)} nm</b> (${(s.hi - s.lo).toFixed(2)} nm, ${s.n_feat} feature${s.n_feat > 1 ? 's' : ''}, ${s.n_lines} robust lines)<br>${s.linear ? 'linear' : '<b>not linear</b>'} at ${secState.th}%: worst feature <span class="v">${pct(s.E_worst, 2)}</span>, whole section ${pct(s.E_affine, 2)}, proportional ${pct(s.E_prop, 2)}<br><span class="muted">mostly ${s.mostly || '–'}${s.mostly_frac ? ' (' + pct(s.mostly_frac, 0) + ')' : ''} · ${s.driver1}, ${s.driver2}${s.family_n > 1 ? ' · family of ' + s.family_n : ''}</span>`, e.clientX, e.clientY); });
+  showTip(`<b>${s.lo.toFixed(2)}–${s.hi.toFixed(2)} nm</b> (${(s.hi - s.lo).toFixed(2)} nm, ${s.n_feat_counted} of ${s.n_feat} features count, ${s.n_lines} robust lines)<br>${s.linear ? 'linear' : '<b>not linear</b>'} at ${secState.th}%: worst feature <span class="v">${pct(s.E_worst, 2)}</span>, whole section ${pct(s.E_window, 2)} (${pct(s.E_affine, 2)} if an intercept were allowed)<br><span class="muted">mostly ${s.mostly || '–'}${s.mostly_frac ? ' (' + pct(s.mostly_frac, 0) + ')' : ''} · ${s.driver1}, ${s.driver2}${s.family_n > 1 ? ' · family of ' + s.family_n : ''}</span>`, e.clientX, e.clientY); });
 $('#secDetail').addEventListener('pointerleave', hideTip);
 $('#secMulti').addEventListener('change', renderSections);
 function seg2(id, key, fn) { const s = $(id); s.querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.v === secState[key]);
@@ -753,9 +774,39 @@ famM.listeners.push((t, c, e) => {
 });
 ramp($('#rampF'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Off a straight line');
 
+
+// ---------- 5-10 nm windows, model and data ----------
+const WIN = JSON.parse(document.getElementById('windata').textContent);
+function winCharts() {
+  const box = $('#winPanels'); box.innerHTML = '';
+  ARMS.forEach(arm => {
+    const t = WIN.windows[arm]; if (!t) return;
+    const c = t.columns, rows = t.data.map(r => { const o = {}; c.forEach((k, j) => o[k] = r[j]); return o; });
+    const floorv = rows.map(r => r.n1_worst != null ? Math.max(r.n1_worst, r.n2_worst ?? 0) : null).filter(v => v != null && isFinite(v)).sort((a, b) => a - b);
+    const fl = floorv.length ? floorv[floorv.length >> 1] : null;
+    const best = WIN.best.filter(b => b.arm === arm && b.ranked_by === 'both').map(b => b.lo);
+    const pn = el('div', { class: 'panel' }, `<h4>${arm} arm <span class="muted">${rows.length} windows · Spearman ${WIN.corr[arm].spearman_model_data.toFixed(2)}</span></h4>`); box.append(pn);
+    const holder = el('div'); pn.append(holder);
+    const F = frame(holder, { W: 360, H: 300, x: lg(0.01, 2), y: lg(0.001, 2), xt: [0.01, 0.1, 1], yt: [0.001, 0.01, 0.1, 1], xf: v => pct(v, 0), yf: v => pct(v, v < 0.01 ? 1 : 0),
+      xlab: 'model worst feature', ylab: arm === 'm' ? 'data, 6 visits' : 'data, night 1 → 2' });
+    F.svg.append(sv('line', { x1: F.X(0.01), x2: F.X(2), y1: F.Y(0.01), y2: F.Y(2), stroke: 'var(--rule)' }));
+    if (fl) F.svg.append(sv('line', { x1: F.X(0.01), x2: F.X(2), y1: F.Y(Math.max(fl, 0.001)), y2: F.Y(Math.max(fl, 0.001)), stroke: 'var(--fg-3)', 'stroke-dasharray': '5 4' }));
+    rows.forEach(r => { const x = Math.min(2, Math.max(0.01, r.E_worst)), y = Math.min(2, Math.max(0.001, r.obs_worst)), isb = best.includes(r.lo);
+      const ci = sv('circle', { cx: F.X(x), cy: F.Y(y), r: isb ? 5 : 3, fill: isb ? 'var(--s2)' : 'var(--s1)', 'fill-opacity': isb ? 1 : 0.45, stroke: isb ? 'var(--fg)' : 'none', 'stroke-width': 1.5 });
+      ci.addEventListener('pointermove', e => showTip(`<b>${arm} ${r.lo.toFixed(2)}–${r.hi.toFixed(2)} nm</b> ${r.mostly}<br>model: worst <span class="v">${pct(r.E_worst, 1)}</span>, window ${pct(r.E_window, 1)}<br>data: worst <span class="v">${r.obs_worst > 0 ? pct(r.obs_worst, 2) : 'below noise'}</span>, window ${r.obs_window > 0 ? pct(r.obs_window, 2) : 'below noise'}${r.n1_worst != null ? `<br><span class="muted">within one night: ${pct(r.n1_worst, 2)} / ${pct(r.n2_worst, 2)}</span>` : ''}`, e.clientX, e.clientY));
+      ci.addEventListener('pointerleave', hideTip); F.svg.append(ci); });
+  });
+}
+function winTable() {
+  let h = '<thead><tr><th>Arm</th><th class="n">Window [nm]</th><th class="n">Width</th><th>Mostly</th><th class="n">Lines</th><th class="n">Model: worst</th><th class="n">Model: window</th><th class="n">Data: worst</th><th class="n">Data: window</th><th class="n">Within a night</th><th class="n">χ²/dof</th></tr></thead><tbody>';
+  ARMS.forEach(arm => WIN.best.filter(b => b.arm === arm && b.ranked_by === 'both' && b.rank <= 3).forEach(b => {
+    h += `<tr${b.rank === 1 ? ' class="hl"' : ''}><td>${b.rank === 1 ? arm : ''}</td><td class="n">${b.lo.toFixed(2)}–${b.hi.toFixed(2)}</td><td class="n">${b.width.toFixed(1)}</td><td>${b.mostly}</td><td class="n">${b.n_lines}</td><td class="n">${pct(b.E_worst, 1)}</td><td class="n">${pct(b.E_window, 1)}</td><td class="n">${b.obs_worst > 0 ? pct(b.obs_worst, 2) : 'below noise'}</td><td class="n">${b.obs_window > 0 ? pct(b.obs_window, 2) : 'below noise'}</td><td class="n">${b.n1_worst != null ? pct(Math.max(b.n1_worst, b.n2_worst), 2) : '–'}</td><td class="n">${b.chi2_dof.toFixed(1)}</td></tr>`; }));
+  $('#winTable').innerHTML = h + '</tbody>';
+}
+
 // ---------- draw everything ----------
-function drawAll() { drawRamps(); ramp($('#rampF'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Off a straight line'); big.render(big.idx.length ? null : armIdx()); drawStrip(); renderLR(); mMats.forEach(M => M.render(M.idx.length ? null : [...Array(nM).keys()])); binChart(); contrastChart(); rnChart(); renderSections(); renderFam(); }
-drawAll(); renderGroups();
+function drawAll() { drawRamps(); ramp($('#rampF'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Off a straight line'); big.render(big.idx.length ? null : armIdx()); drawStrip(); renderLR(); mMats.forEach(M => M.render(M.idx.length ? null : [...Array(nM).keys()])); binChart(); contrastChart(); rnChart(); renderSections(); renderFam(); winCharts(); }
+drawAll(); renderGroups(); winTable();
 const retheme = () => { refreshLuts(); drawAll(); };
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
 new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
