@@ -31,7 +31,7 @@ else:
 
 def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], linewidth_scatters = 3, LSF_err = 0.06, line_wing = True, r_scat = 0.0125, wf = 3.4, inclusion_limit = 1e-3, chem_scatters = 5, use_centroider = True,\
                           intensity_cut = 5e-6, line_spread = 0.1, resolution = np.inf, dlambda = 15, aerosols = ['background', 'volcanic'],\
-                          pwvs = [0.0, 4.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = DATA_PATH, obs = 'MaunaKea', verbose = 1, r_hot_scales = [1.0]):
+                          pwvs = [0.0, 4.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = DATA_PATH, obs = 'MaunaKea', verbose = 1, r_hot_scales = [1.0], return_params = False):
     
     '''
     Function to simulate spectra, and find the wavelength peaks of those spectra
@@ -42,6 +42,7 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
     
     Trots, Tvibs: arrays or lists of the rotational/vibrational temperatures to simulate [K]
     r_hot_scales: multipliers of the OH hot-population fractions (species_intensities.R_HOT) to simulate, looped like Trots and Tvibs
+    return_params: also return, per spectrum, what was simulated (covariation.PARAM_NAMES), as a sixth output
     
     line_wing: whether or not to include an exponential scattering wing
     r_scat: the fraction of intensity to go into the wing
@@ -81,6 +82,7 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
     transmission_wavs = []
     specs = []
     cont_specs = []
+    spec_params = [] # what each spectrum simulated, see return_params
 
     A = get_pgopher_linelist(path = data_path) # get the linelist for the OH
     if cont:
@@ -236,6 +238,7 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
                             alpha_species = np.linspace(0,1, chem_scatters+2)[1:-1] # this needs to be tuneable parameter
                             for alpha in alpha_species:
                                 I_ratio = make_intensity_ratios(alpha)
+                                spec_params.append([pwv, zd, Tr, Tv, rh, l, alpha, *I_ratio]) # covariation.PARAM_NAMES
                                 spec_all = spec_OH*I_ratio[0]+spec_O2_B*I_ratio[1]+spec_O2_a1*I_ratio[2]+spec_O_green*I_ratio[3]+spec_O_red*I_ratio[4]+spec_Na*I_ratio[5]+spec_H*I_ratio[4]
                                 if cont:
                                     spec_cont = spec_all + continuum
@@ -248,6 +251,8 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
         line_s = line_spread
 
     peak_wavs = get_peaks(specs, wav_range, line_spread=line_s, intensity_cut = intensity_cut, use_centroider = use_centroider, verbose = verbose)
+    if return_params:
+        return peak_wavs, specs, cont_specs, transmission_curves, transmission_wavs, np.array(spec_params)
     if verbose == 2:
         print("Spectra simulated. Returning a list of list of peak wavelengths, a list of simulated spectra, a list of simulated spectra with continuum, a list of transmission curves and a list of corresponding wavelength curves")
     return peak_wavs, specs, cont_specs, transmission_curves, transmission_wavs

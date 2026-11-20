@@ -1,0 +1,631 @@
+<title>PFS Co-varying Sky Lines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column (~68ch) for prose; figures break out to a wider track. Matrices are the subject, so the accent is the heatmap blue. */
+:root {
+  --bg: #f5f7fa; --surface: #ffffff; --surface-2: #eaeef3; --rule: #d6dce4;
+  --fg: #12161c; --fg-2: #48515e; --fg-3: #6b7482;
+  --accent: #256abf; --accent-soft: #e3edf9;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --good: #0f7f0f; --bad: #c23434;
+  --seq: #0d366b,#184f95,#256abf,#3987e5,#6da7ec,#9ec5f4,#cde2fb,#eef4fc;
+  --div: #184f95,#6da7ec,#e6e5e1,#f2a39a,#e34948,#8f1d1f;
+  --missing: #e3e6ea;
+  --display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', 'Arial Narrow', sans-serif;
+  --sans: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111418; --surface: #191d23; --surface-2: #222830; --rule: #313945;
+  --fg: #eef1f5; --fg-2: #b8c0cb; --fg-3: #8c95a2;
+  --accent: #6da7ec; --accent-soft: #1b2a3e;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #3cc23c; --bad: #ef6b6b;
+  --seq: #e3eefc,#9ec5f4,#6da7ec,#3987e5,#256abf,#184f95,#133661,#1a2433;
+  --div: #9ec5f4,#3987e5,#3a3a37,#a8403f,#e66767,#ffc2bd;
+  --missing: #262b33;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111418; --surface: #191d23; --surface-2: #222830; --rule: #313945;
+  --fg: #eef1f5; --fg-2: #b8c0cb; --fg-3: #8c95a2;
+  --accent: #6da7ec; --accent-soft: #1b2a3e;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --good: #3cc23c; --bad: #ef6b6b;
+  --seq: #e3eefc,#9ec5f4,#6da7ec,#3987e5,#256abf,#184f95,#133661,#1a2433;
+  --div: #9ec5f4,#3987e5,#3a3a37,#a8403f,#e66767,#ffc2bd;
+  --missing: #262b33;
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--sans); padding-inline: 20px; padding-block: 28px 64px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 56px; }
+.prose { max-width: 70ch; }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; text-wrap: balance; line-height: 1.15; margin: 0; }
+h1 { font-size: clamp(30px, 4.4vw, 44px); letter-spacing: -0.01em; }
+h2 { font-size: 26px; }
+h3 { font-size: 17px; font-family: var(--sans); }
+p { margin: 0; }
+.stack { display: grid; gap: 14px; }
+.eyebrow { font: 500 12px/1.4 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-3); }
+.lede { font-size: 18px; color: var(--fg-2); max-width: 62ch; }
+.meta { font: 13px/1.5 var(--mono); color: var(--fg-3); }
+code, .mono { font-family: var(--mono); font-size: 0.92em; }
+.num { font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.tile .big { font: 600 30px/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.tile .lab { font-size: 13px; color: var(--fg-2); }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg button, .chip { font: 500 13px/1 var(--sans); color: var(--fg-2); background: transparent; border: 0; padding: 9px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--fg); }
+.chip { border: 1px solid var(--rule); border-radius: 999px; padding: 7px 12px; background: var(--surface); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); color: var(--fg); border-color: var(--accent); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ctl-label { font-size: 12px; color: var(--fg-3); margin-right: 8px; }
+
+.figure { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.cap { font-size: 13px; color: var(--fg-2); max-width: 90ch; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.panels.two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.panel { display: grid; gap: 6px; min-width: 0; align-content: start; }
+.panel h4 { margin: 0; font: 600 13px/1.3 var(--sans); }
+.panel .sub { font-size: 12px; color: var(--fg-3); }
+.mbox { position: relative; width: 100%; aspect-ratio: 1; background: var(--missing); }
+.mbox canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mbox canvas.px { image-rendering: pixelated; }
+.mbox .xh { position: absolute; background: var(--fg); opacity: 0.55; pointer-events: none; }
+.bigrow { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .bigrow { grid-template-columns: 1fr; } }
+.strip { height: 8px; width: 100%; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; font-size: 12px; color: var(--fg-2); }
+.legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.ramp { display: grid; gap: 3px; width: 240px; max-width: 100%; }
+.ramp canvas { width: 100%; height: 10px; display: block; border-radius: 2px; }
+.ramp .ticks { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--fg-3); }
+
+.details { background: var(--surface-2); border-radius: 6px; padding: 14px; display: grid; gap: 10px; font-size: 13px; min-width: 0; }
+.details h3 { font-size: 15px; }
+.details .rowl { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 10px; font: 12px/1.5 var(--mono); }
+.details .rowl .arm { color: var(--fg-3); }
+.muted { color: var(--fg-3); }
+
+.tip { position: fixed; z-index: 10; pointer-events: none; background: var(--surface); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 9px 11px;
+       font: 12px/1.45 var(--sans); box-shadow: 0 6px 20px rgba(0,0,0,0.18); max-width: 340px; }
+.tip b { font-weight: 600; }
+.tip .v { font: 500 13px var(--mono); }
+
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; color: var(--fg-2); font-size: 12px; white-space: nowrap; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12px; }
+tr.hl td { background: var(--accent-soft); }
+.pill { display: inline-flex; align-items: center; gap: 5px; font: 500 11px/1 var(--sans); padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--good); } .pill.no { color: var(--bad); } .pill.na { color: var(--fg-3); }
+.members { font: 11px/1.5 var(--mono); color: var(--fg-2); }
+#gtable tbody tr { cursor: pointer; }
+.scroll { max-height: 560px; overflow: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); }
+.scroll thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+input[type="search"] { font: 14px var(--sans); padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); color: var(--fg); min-width: 0; width: 240px; max-width: 100%; }
+label.chk { font-size: 13px; color: var(--fg-2); display: inline-flex; gap: 6px; align-items: center; }
+
+svg text { fill: var(--fg-2); font: 11px var(--sans); }
+svg .axis line, svg .axis path { stroke: var(--rule); }
+svg .grid line { stroke: var(--rule); stroke-opacity: 0.6; }
+.findings { display: grid; gap: 12px; padding-left: 0; list-style: none; margin: 0; }
+.findings li { display: grid; grid-template-columns: 14px 1fr; gap: 12px; }
+.findings li::before { content: ""; width: 4px; border-radius: 2px; background: var(--accent); margin-left: 4px; }
+.findings li.warn::before { background: var(--s2); }
+pre { background: var(--surface-2); border-radius: 6px; padding: 14px; overflow-x: auto; font: 12.5px/1.55 var(--mono); margin: 0; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+<header class="stack">
+  <div class="eyebrow">RAGNAR · PFS b / r / n / m · cent=0 fix4 runs · 2026-11-20</div>
+  <h1>Which PFS sky lines vary together</h1>
+  <p class="lede">RAGNAR now groups the lines whose intensity ratios stay fixed over all the skies it simulates. These are the groups for the four PFS arms, tested on the sky spectra the LSFs were calibrated on.</p>
+  <p class="meta">Branch <span class="mono">ragnar-new-2026</span> of astrockragh/RAGNAR · <span class="mono">dev/covariation.py</span>, <span class="mono">pfs_covar/</span></p>
+</header>
+
+<section class="tiles" id="tiles" aria-label="Summary"></section>
+
+<section class="stack">
+  <div class="prose stack">
+    <h2>What RAGNAR computes</h2>
+    <p>Every spectrum of a RAGNAR run is one sky: here Trot 180 / 210 K, Tvib 8000 / 12000 K, hot population ×0.75 / 1 / 1.33, five chemistry draws, PWV 0 / 3 mm at ZD 30°, and three LSF widths (±5%), 360 skies per arm. For each pair of robust lines, <b>S<sub>ij</sub></b> is the scatter of ln(I<sub>i</sub>/I<sub>j</sub>) over those skies, with I the line-only spectrum at the line centre (no centroider, no continuum). S<sub>ij</sub> = 0.01 means the ratio is fixed to 1%.</p>
+    <p>Lines are grouped by complete linkage at 1%, so every pair inside a group has S<sub>ij</sub> ≤ 1%. The four arms were run with the same grid and seed, so they simulate the same skies and lines can be grouped across arms. A group is a set of lines with a fixed ratio. Two thirds of the groups are one upper state (Λ-doublets, P/Q/R branches, and the same level in different bands); the rest join levels of one v′ whose rotational energies are close enough that Trot 180–210 K moves their ratio by less than 1%.</p>
+  </div>
+</section>
+
+<section class="stack" id="ragnar">
+  <div class="prose stack">
+    <h2>The RAGNAR matrix</h2>
+    <p>All <span id="nAll"></span> robust lines of the four arms, in complete-linkage order, so each group is a dark square on the diagonal. The strip above the matrix shows which arm each line comes from. Hover for a pair, click a line for its group and nearest partners.</p>
+  </div>
+  <div class="figure">
+    <div class="controls">
+      <div><span class="ctl-label">Arms shown</span><span id="armChips"></span></div>
+      <div class="ramp" id="rampS"></div>
+    </div>
+    <div class="bigrow">
+      <div class="panel">
+        <canvas class="strip" id="armStrip" aria-hidden="true"></canvas>
+        <div class="mbox" id="bigBox"></div>
+        <div class="legend" id="armLegend"></div>
+      </div>
+      <aside class="details" id="details" aria-live="polite">
+        <h3>Click a line</h3>
+        <p class="muted">Click anywhere in the matrix to see the row's line, the other members of its group, and the lines outside the group that come closest.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section class="stack" id="sky">
+  <div class="prose stack">
+    <h2>Against the PFS sky: b, r, n</h2>
+    <p>The low-resolution data are four all-sky visits on two nights (2025-09-12 and 09-13), stacked per spectrograph. The Moon was 49° up and 72% full on night 1 and below the horizon on night 2, and the OH was about half as bright on night 2. For each line, <b>d<sub>i</sub></b> is the change of its ln amplitude from night 1 to night 2, averaged over the spectrographs. Lines that vary together keep their ratio, so d<sub>i</sub> − d<sub>j</sub> = 0 within a group. The observed matrix is |d<sub>i</sub> − d<sub>j</sub>|, on the same colour scale as S<sub>ij</sub>.</p>
+    <p>Amplitudes are measured the same way in the data and in RAGNAR's simulated spectra. The amplitude is the LSF Gaussian at the list wavelength, fitted within ±1σ, above a local baseline. The baseline is the mean of the faintest 30% of pixels between 2.5σ and 14σ on each side, joined by a straight line. So a smooth continuum in the data drops out, and RAGNAR's continuum is never used. The errors come from the scatter between the four spectrographs, which see the same sky (floor 1.0% in r and 3.5% in n per stack).</p>
+  </div>
+  <div class="figure">
+    <div class="controls">
+      <div><span class="ctl-label">Lines</span><span class="seg" id="segSub">
+        <button type="button" data-v="all">All with S/N ≥ 30</button><button type="button" data-v="contrast">Peak ≥ 2× baseline</button><button type="button" data-v="clean">… and no H₂O / O₂</button></span></div>
+      <div><span class="ctl-label">Data baseline</span><span class="seg" id="segVar">
+        <button type="button" data-v="base">Local baseline</button><button type="button" data-v="none">None (continuum left in)</button></span></div>
+    </div>
+    <div class="panels two" id="lrPanels"></div>
+    <div class="controls"><div class="ramp" id="rampS2"></div><div class="ramp" id="rampZ"></div></div>
+    <p class="cap" id="lrCap"></p>
+  </div>
+
+  <div class="figure">
+    <h3>Group test, by line selection and baseline</h3>
+    <p class="cap">χ² of each group's d<sub>i</sub> around their weighted mean, with the same errors for every baseline choice. "Pass" is p &gt; 0.01. Spread is the median range of d<sub>i</sub> inside a group; the last two columns are the median |d<sub>i</sub> − d<sub>j</sub>| for pairs in one group and for pairs in different groups.</p>
+    <div class="tbl-wrap"><table id="resTable"></table></div>
+  </div>
+
+  <div class="panels two">
+    <div class="figure">
+      <h3>Ratio change against RAGNAR's ratio scatter</h3>
+      <p class="cap">Median |d<sub>i</sub> − d<sub>j</sub>| over line pairs, binned by S<sub>ij</sub>. Pairs RAGNAR puts below 1% (grey line) reach the noise once low-contrast lines are out; without a baseline they don't.</p>
+      <div id="binChart"></div>
+      <div class="legend" id="binLegend"></div>
+    </div>
+    <div class="figure">
+      <h3>Where the continuum bites</h3>
+      <p class="cap">Each tested line's night change minus its group's mean, against its peak over baseline (the lower of the two nights). Below 2 (shaded), the amplitude depends on what lies under the line: moonlight on night 1 and the wings of neighbours.</p>
+      <div id="contrastChart"></div>
+      <div class="legend" id="contrastLegend"></div>
+    </div>
+  </div>
+
+  <div class="figure">
+    <h3>r and n: one response change</h3>
+    <p class="cap" id="rnCap"></p>
+    <div id="rnChart"></div>
+  </div>
+</section>
+
+<section class="stack" id="marm">
+  <div class="prose stack">
+    <h2>The m arm</h2>
+    <p id="mText"></p>
+  </div>
+  <div class="figure">
+    <div class="panels" id="mPanels"></div>
+    <div class="controls"><div class="ramp" id="rampS3"></div><div class="ramp" id="rampR"></div></div>
+  </div>
+</section>
+
+<section class="stack" id="groups">
+  <div class="prose stack">
+    <h2>Groups</h2>
+    <p>The <span id="nMulti"></span> groups with two or more lines. RAGNAR's scatter is the largest S<sub>ij</sub> inside the group. The data columns use the lines with peak ≥ 2× baseline and S/N ≥ 30. Click a row to mark its lines in the matrix above.</p>
+  </div>
+  <div class="controls">
+    <div><span class="ctl-label">Spans arms</span><span id="gChips"></span></div>
+    <input type="search" id="gSearch" placeholder="v′, wavelength, upper state" aria-label="Filter groups">
+    <label class="chk"><input type="checkbox" id="gTested"> Tested in the data</label>
+    <span class="muted" id="gCount"></span>
+  </div>
+  <div class="scroll"><table id="gtable"><thead><tr>
+    <th class="n">Group</th><th>Arms</th><th class="n">Lines</th><th>Mostly</th><th class="n">Upper states</th><th class="n">RAGNAR max S</th><th class="n">Tested</th><th class="n">χ²/dof</th><th>Data</th><th>Members (arm:λ nm)</th>
+  </tr></thead><tbody></tbody></table></div>
+</section>
+
+<section class="stack" id="use">
+  <div class="prose stack">
+    <h2>For flux calibration</h2>
+    <ul class="findings">
+      <li><span>Use lines from one RAGNAR group (<span class="mono">covar_n</span> ≥ 2) and measure them with a baseline taken from the data around each line. Require a peak of at least twice the baseline in every exposure. With that, groups held their ratios to 2% between two very different nights.</span></li>
+      <li class="warn"><span>Lines with H₂O or O₂ absorption break groups even at high contrast. The fix4 grid only spans PWV 0–3 mm at one airmass. Drop flagged lines, or rerun the co-variation with a wider PWV and airmass grid.</span></li>
+      <li class="warn"><span>The b groups are untested. On the moonlit night no b line in a group stood 2× above its baseline, and the blue ones (&lt; 560 nm) changed by up to a factor of three. They need a dark night.</span></li>
+      <li><span>Groups that span arms measure the arms' relative response. Here r against n moved by <span id="rnInline"></span> between the nights.</span></li>
+      <li class="warn"><span>The m data (six 60 s visits within 9 minutes) are noise-limited, and m was never observed with b, r or n. m groups and m-to-r groups are RAGNAR predictions for now.</span></li>
+    </ul>
+  </div>
+  <pre><code>from RAGNAR import ragnar
+from dev.covariation import combine_covariation
+
+# every run now adds upper_state, vgroup, covar_group, covar_n, covar_scatter, covar_nearest
+# and writes {save_name}_{date}_covar.npz (per-sky intensities) next to the list
+lineDf, *_ = ragnar(..., use_centroider = 0, covariation = True, covar_threshold = 0.01, save_name = 'sweep_0.112_0_r_fix4')
+
+# group across runs that simulated the same skies (same grid, same seed)
+T, S = combine_covariation(['lineLists/sweep_0.088_0_b_fix4_20261120_covar.npz', '..._r_...', '..._n_...', '..._m_...'],
+                           names = ['b', 'r', 'n', 'm'], threshold = 0.01)</code></pre>
+  <p class="meta">Line tables: pfs_covar/out/covar_lines.csv, covar_groups.csv · runs: run_brnm_fix4_cent0_20261120.slurm · data: validation/tier2/sky_stack_*, /scratch/gpfs/cj1223/pfs_sky_medium</p>
+</section>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script type="application/json" id="data">/*DATA*/</script>
+<script>
+(async function () {
+const REP = JSON.parse(document.getElementById('data').textContent);
+const SUM = REP.summary;
+const $ = s => document.querySelector(s);
+const el = (t, a = {}, h = '') => { const e = document.createElement(t); for (const k in a) e.setAttribute(k, a[k]); if (h) e.innerHTML = h; return e; };
+const pct = (x, d = 1) => (100 * x).toFixed(d) + '%';
+const cst = v => v == null ? '–' : v.toFixed(1);
+const ARMS = ['b', 'r', 'n', 'm'];
+const ARMVAR = { b: '--s1', r: '--s2', n: '--s3', m: '--s4' };
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const hex = h => { h = h.replace('#', ''); return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)); };
+
+// ---------- data ----------
+async function inflate(b64) {
+  const bin = atob(b64), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const out = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer();
+  return new Uint8Array(out);
+}
+function unpack(tri, n, diag) {
+  const M = new Uint8Array(n * n); let k = 0;
+  for (let i = 0; i < n; i++) { M[i * n + i] = diag; for (let j = i + 1; j < n; j++) { const v = tri[k++]; M[i * n + j] = v; M[j * n + i] = v; } }
+  return M;
+}
+const decS = c => c === 255 ? NaN : Math.pow(10, -3 + 3 * c / 254);            // S, D: 10^-3 .. 1
+const encR = r => !isFinite(r) ? 255 : Math.max(0, Math.min(254, Math.round((Math.log10(Math.max(r, 1e-9)) + 1) / 3 * 254))); // ratio 0.1 .. 100
+
+const all = REP.all, lr = REP.lr, mm = REP.m;
+const nA = all.lines.length, nL = lr.lines.length, nM = mm.lines.length;
+const [SA, SL, SopL, DLb, DLn, SM, OM, RM] = await Promise.all([inflate(all.S), inflate(lr.S), inflate(lr.Sop), inflate(lr.D.base), inflate(lr.D.none), inflate(mm.S), inflate(mm.O), inflate(mm.R)]);
+const MA = unpack(SA, nA, 0), ML = unpack(SL, nL, 0), MLop = unpack(SopL, nL, 0), MDb = unpack(DLb, nL, 0), MDn = unpack(DLn, nL, 0);
+const MSm = unpack(SM, nM, 0), MOm = unpack(OM, nM, 0), MRm = unpack(RM, nM, 255);
+// |d_i - d_j| / error for both baselines, with the base errors
+function zMat(MD) {
+  const Z = new Uint8Array(nL * nL);
+  for (let i = 0; i < nL; i++) for (let j = 0; j < nL; j++) {
+    if (i === j) { Z[i * nL + j] = 255; continue; }
+    const d = decS(MD[i * nL + j]), e = Math.hypot(lr.err[i], lr.err[j]);
+    Z[i * nL + j] = isFinite(d) && e > 0 ? encR(d / e) : 255;
+  }
+  return Z;
+}
+const MZb = zMat(MDb), MZn = zMat(MDn);
+
+// ---------- colour ----------
+function lut(stops) {
+  const cs = stops.split(',').map(s => hex(s.trim())), L = new Uint8ClampedArray(256 * 4), miss = hex(tok('--missing'));
+  for (let c = 0; c < 255; c++) {
+    const t = c / 254 * (cs.length - 1), k = Math.min(cs.length - 2, Math.floor(t)), f = t - k;
+    for (let q = 0; q < 3; q++) L[c * 4 + q] = cs[k][q] + (cs[k + 1][q] - cs[k][q]) * f;
+    L[c * 4 + 3] = 255;
+  }
+  L.set([...miss, 255], 255 * 4);
+  return L;
+}
+let LUT = {};
+function refreshLuts() { LUT = { seq: lut(tok('--seq')), div: lut(tok('--div')) }; }
+refreshLuts();
+
+// ---------- tooltip ----------
+const tip = $('#tip');
+function showTip(html, x, y) {
+  tip.innerHTML = html; tip.hidden = false;
+  const r = tip.getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+  let tx = x + 14, ty = y + 14;
+  if (tx + r.width > W - 8) tx = x - r.width - 14;
+  if (ty + r.height > H - 8) ty = y - r.height - 14;
+  tip.style.left = Math.max(8, tx) + 'px'; tip.style.top = Math.max(8, ty) + 'px';
+}
+const hideTip = () => { tip.hidden = true; };
+const lineTxt = l => `<span class="mono">${l.arm} ${l.wav.toFixed(3)}</span> ${l.lab}<br><span class="muted">${l.up} (${Math.round(100 * l.uf)}%) · group ${l.g}${l.gn > 1 ? ' (' + l.gn + ' lines)' : ', alone'}${l.ab ? ' · H₂O/O₂' : ''}</span>`;
+
+// ---------- matrix panel ----------
+class Mat {
+  constructor(box, { n, kind, get }) {
+    this.box = box; this.n = n; this.kind = kind; this.get = get; this.idx = [];
+    this.cv = el('canvas'); this.ov = el('canvas'); this.ov.style.pointerEvents = 'none';
+    this.xh = el('div', { class: 'xh' }); this.yh = el('div', { class: 'xh' }); this.xh.hidden = this.yh.hidden = true;
+    box.append(this.cv, this.ov, this.xh, this.yh);
+    this.listeners = [];
+    this.cv.addEventListener('pointermove', e => { const c = this.cell(e); if (c) this.listeners.forEach(f => f('move', c, e)); });
+    this.cv.addEventListener('pointerleave', () => this.listeners.forEach(f => f('leave')));
+    this.cv.addEventListener('click', e => { const c = this.cell(e); if (c) this.listeners.forEach(f => f('click', c, e)); });
+  }
+  cell(e) {
+    const r = this.cv.getBoundingClientRect(), m = this.idx.length;
+    const c = Math.floor((e.clientX - r.left) / r.width * m), w = Math.floor((e.clientY - r.top) / r.height * m);
+    return c >= 0 && w >= 0 && c < m && w < m ? { row: w, col: c } : null;
+  }
+  render(idx) {
+    if (idx) this.idx = idx;
+    const m = this.idx.length, cv = this.cv; cv.width = cv.height = Math.max(1, m);
+    const ctx = cv.getContext('2d'), img = ctx.createImageData(Math.max(1, m), Math.max(1, m)), L = LUT[this.kind];
+    for (let r = 0; r < m; r++) { const ir = this.idx[r]; for (let c = 0; c < m; c++) { const code = this.get(ir, this.idx[c]); img.data.set(L.subarray(code * 4, code * 4 + 4), (r * m + c) * 4); } }
+    ctx.putImageData(img, 0, 0);
+    cv.classList.toggle('px', cv.clientWidth >= m);
+    this.mark(this.marked);
+  }
+  cross(c) {
+    if (!c) { this.xh.hidden = this.yh.hidden = true; return; }
+    const m = this.idx.length, W = this.cv.clientWidth, s = W / m;
+    Object.assign(this.xh.style, { left: (c.col + 0.5) * s + 'px', top: 0, width: '1px', height: W + 'px' });
+    Object.assign(this.yh.style, { top: (c.row + 0.5) * s + 'px', left: 0, height: '1px', width: W + 'px' });
+    this.xh.hidden = this.yh.hidden = false;
+  }
+  mark(set) { // ticks on the edges for marked full-order indices
+    this.marked = set; const ov = this.ov, W = this.cv.clientWidth;
+    ov.width = ov.height = Math.round(W * devicePixelRatio); ov.style.width = ov.style.height = W + 'px';
+    const ctx = ov.getContext('2d'); ctx.clearRect(0, 0, ov.width, ov.height);
+    if (!set || !set.size) return;
+    const m = this.idx.length, s = ov.width / m, d = devicePixelRatio;
+    ctx.strokeStyle = tok('--s2'); ctx.lineWidth = 2 * d;
+    this.idx.forEach((k, p) => { if (!set.has(k)) return; const x = (p + 0.5) * s;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, 9 * d); ctx.moveTo(0, x); ctx.lineTo(9 * d, x); ctx.stroke();
+      ctx.strokeRect(x - 4 * d, x - 4 * d, 8 * d, 8 * d); });
+  }
+}
+function ramp(box, kind, ticks, title) {
+  box.innerHTML = '';
+  const t = el('div', { class: 'ctl-label' }, title), cv = el('canvas', { width: 254, height: 1 }), tk = el('div', { class: 'ticks' });
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(254, 1);
+  for (let c = 0; c < 254; c++) img.data.set(LUT[kind].subarray(c * 4, c * 4 + 4), c * 4);
+  ctx.putImageData(img, 0, 0);
+  ticks.forEach(s => tk.append(el('span', {}, s)));
+  box.append(t, cv, tk);
+}
+function drawRamps() {
+  ramp($('#rampS'), 'seq', ['0.1%', '1%', '10%', '100%'], 'Ratio scatter S<sub>ij</sub> (dark: fixed ratio)');
+  ramp($('#rampS2'), 'seq', ['0.1%', '1%', '10%', '100%'], 'S<sub>ij</sub> and |d<sub>i</sub> − d<sub>j</sub>|');
+  ramp($('#rampZ'), 'div', ['0.1', '1', '10', '100'], '|d<sub>i</sub> − d<sub>j</sub>| / error');
+  ramp($('#rampS3'), 'seq', ['0.1%', '1%', '10%', '100%'], 'S<sub>ij</sub> and observed scatter');
+  ramp($('#rampR'), 'div', ['0.1', '1', '10', '100'], 'observed / expected from noise');
+}
+
+// ---------- summary tiles ----------
+const lrb = SUM.lr.base, rn = SUM.rn;
+const tiles = [
+  [SUM.n_multi_groups, `groups of 2 or more lines, holding ${SUM.n_lines_in_multi} of the ${SUM.n_lines} robust lines in b, r, n, m`],
+  [lrb.clean.med_spread ? pct(lrb.clean.med_spread) : '', `median spread of a group's night-to-night change, clean lines (${lrb.clean.n_groups_tested} groups); other pairs differ by ${pct(lrb.clean.med_absdiff_other, 0)}`],
+  [rn.corrected.chi2_dof.toFixed(1), `χ²/dof of the clean groups after one r/n response change; ${Math.round(rn.corrected.frac_groups_p01 * rn.corrected.n_groups_tested)} of ${rn.corrected.n_groups_tested} pass`],
+  [SUM.lr.none.clean.chi2_dof.toFixed(1), `χ²/dof of the same groups with the continuum left in (no baseline), against ${lrb.clean.chi2_dof.toFixed(1)}`],
+];
+tiles.forEach(([b, l]) => $('#tiles').append(el('div', { class: 'tile' }, `<div class="big">${b}</div><div class="lab">${l}</div>`)));
+$('#nAll').textContent = nA.toLocaleString();
+$('#nMulti').textContent = SUM.n_multi_groups;
+$('#rnInline').textContent = `${(100 * rn.offset).toFixed(1)} ± ${(100 * rn.offset_err).toFixed(1)}%`;
+
+// ---------- big matrix ----------
+const big = new Mat(el('div'), { n: nA, kind: 'seq', get: (i, j) => MA[i * nA + j] });
+$('#bigBox').replaceWith(big.box); big.box.className = 'mbox'; big.box.id = 'bigBox';
+let armOn = new Set(ARMS);
+function armIdx() { const r = []; for (let i = 0; i < nA; i++) if (armOn.has(all.lines[i].arm)) r.push(i); return r; }
+function drawStrip() {
+  const cv = $('#armStrip'), idx = big.idx; cv.width = Math.max(1, idx.length); cv.height = 1;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(cv.width, 1), col = {};
+  ARMS.forEach(a => col[a] = hex(tok(ARMVAR[a])));
+  idx.forEach((k, p) => img.data.set([...col[all.lines[k].arm], 255], p * 4));
+  ctx.putImageData(img, 0, 0); cv.style.imageRendering = cv.clientWidth >= idx.length ? 'pixelated' : 'auto';
+}
+const chips = $('#armChips');
+ARMS.forEach(a => { const b = el('button', { type: 'button', class: 'chip', 'aria-pressed': 'true' }, a); b.onclick = () => {
+  if (armOn.has(a) && armOn.size > 1) armOn.delete(a); else armOn.add(a);
+  [...chips.children].forEach(c => c.setAttribute('aria-pressed', armOn.has(c.textContent)));
+  big.render(armIdx()); drawStrip(); }; chips.append(b); });
+const armNames = { b: 'b (380–650 nm)', r: 'r (630–970 nm)', n: 'n (940–1260 nm)', m: 'm (710–885 nm)' };
+ARMS.forEach(a => $('#armLegend').append(el('span', {}, `<span class="sw" style="background:var(${ARMVAR[a]})"></span>${armNames[a]}, ${SUM.lines_by_arm[a]} lines`)));
+big.listeners.push((t, c, e) => {
+  if (t === 'leave') { hideTip(); big.cross(null); return; }
+  const i = big.idx[c.row], j = big.idx[c.col], li = all.lines[i], lj = all.lines[j];
+  if (t === 'move') { big.cross(c); showTip(`${lineTxt(li)}<br>${lineTxt(lj)}<br>S<sub>ij</sub> = <span class="v">${i === j ? '0' : pct(decS(MA[i * nA + j]), 2)}</span>${li.g === lj.g && i !== j ? ' · same group' : ''}`, e.clientX, e.clientY); }
+  if (t === 'click') showDetails(i);
+});
+function showDetails(i) {
+  const l = all.lines[i], d = $('#details');
+  const row = k => decS(MA[i * nA + k]);
+  const same = [], near = [];
+  for (let k = 0; k < nA; k++) { if (k === i) continue; (all.lines[k].g === l.g ? same : near).push(k); }
+  same.sort((a, b) => row(a) - row(b)); near.sort((a, b) => row(a) - row(b));
+  const li = k => `<span class="arm">${all.lines[k].arm}</span><span>${all.lines[k].wav.toFixed(3)} ${all.lines[k].lab}</span><span>${pct(row(k), 2)}</span>`;
+  d.innerHTML = `<h3><span class="mono">${l.arm} ${l.wav.toFixed(3)} nm</span></h3>
+    <div>${l.lab}<br><span class="muted">${l.up}, ${Math.round(100 * l.uf)}% of the line centre · ${l.vg}${l.ab ? ' · H₂O/O₂ absorption' : ''}</span></div>
+    <div><b>Group ${l.g}</b> <span class="muted">${l.gn > 1 ? l.gn + ' lines, largest S ' + pct(l.gs, 2) : 'no partner below 1%'}</span></div>
+    ${same.length ? `<div class="rowl">${same.map(li).join('')}</div>` : ''}
+    <div><b>Closest outside the group</b></div><div class="rowl">${near.slice(0, 5).map(li).join('')}</div>`;
+  big.mark(new Set([i, ...same]));
+}
+
+// ---------- LR panels ----------
+const lrState = { sub: 'contrast', v: 'base' };
+const lrPanels = [
+  { t: 'RAGNAR S<sub>ij</sub>', s: 'line centre, 360 skies', kind: 'seq', get: () => ML },
+  { t: 'RAGNAR, measured like the data', s: 'same baseline and fit on the simulated spectra', kind: 'seq', get: () => MLop },
+  { t: 'PFS |d<sub>i</sub> − d<sub>j</sub>|', s: 'change of ln ratio, night 1 → 2', kind: 'seq', get: () => lrState.v === 'base' ? MDb : MDn },
+  { t: 'PFS |d<sub>i</sub> − d<sub>j</sub>| / error', s: 'blue: consistent; red: the ratio changed', kind: 'div', get: () => lrState.v === 'base' ? MZb : MZn },
+];
+const lrMats = lrPanels.map(p => {
+  const pn = el('div', { class: 'panel' }, `<h4>${p.t}</h4><div class="sub">${p.s}</div>`), box = el('div', { class: 'mbox' }); pn.append(box); $('#lrPanels').append(pn);
+  return new Mat(box, { n: nL, kind: p.kind, get: (i, j) => p.get()[i * nL + j] });
+});
+lrMats.forEach((M, k) => M.listeners.push((t, c, e) => {
+  if (t === 'leave') { hideTip(); lrMats.forEach(x => x.cross(null)); return; }
+  if (t !== 'move') return;
+  lrMats.forEach(x => x.cross(c));
+  const i = M.idx[c.row], j = M.idx[c.col], a = lr.lines[i], b = lr.lines[j];
+  const S = decS(ML[i * nL + j]), D = decS((lrState.v === 'base' ? MDb : MDn)[i * nL + j]), e2 = Math.hypot(lr.err[i], lr.err[j]);
+  showTip(`${lineTxt(a)}<br>${lineTxt(b)}<br>RAGNAR S = <span class="v">${i === j ? '0' : pct(S, 2)}</span> · |d<sub>i</sub> − d<sub>j</sub>| = <span class="v">${i === j ? '0' : pct(D, 1)}</span> ± ${pct(e2, 1)}<br><span class="muted">peak/baseline ${cst(lr.contrast[i])} and ${cst(lr.contrast[j])}</span>`, e.clientX, e.clientY);
+}));
+function lrIdx() {
+  const r = [];
+  for (let i = 0; i < nL; i++) { const ok = lrState.sub === 'all' || (lr.contrast[i] >= SUM.contrast_min && (lrState.sub === 'contrast' || !lr.lines[i].ab)); if (ok) r.push(i); }
+  return r;
+}
+function renderLR() {
+  const idx = lrIdx(); lrMats.forEach(M => M.render(idx));
+  const st = SUM.lr[lrState.v][lrState.sub];
+  $('#lrCap').innerHTML = `${idx.length} lines in the same order in all four panels. ${st.n_groups_tested} groups have two or more of them: χ²/dof ${st.chi2_dof.toFixed(2)}, ${Math.round(100 * st.frac_groups_p01)}% pass, median group spread ${pct(st.med_spread)}. Pairs in one group differ by ${pct(st.med_absdiff_same, 2)} (noise ${pct(st.med_noise_same, 2)}); pairs in different groups by ${pct(st.med_absdiff_other)}.`;
+}
+function seg(id, key, fn) { const s = $(id); s.querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.v === lrState[key]);
+  b.onclick = () => { lrState[key] = b.dataset.v; s.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); fn(); }; }); }
+seg('#segSub', 'sub', renderLR); seg('#segVar', 'v', renderLR);
+
+// ---------- result table ----------
+(function () {
+  const subs = { all: 'All with S/N ≥ 30', contrast: 'Peak ≥ 2× baseline', clean: '… and no H₂O / O₂' };
+  const vars = { base: 'local (faintest 30%, ±14σ)', wide: 'local, wider (±25σ, 20%)', narrow: 'local, narrower (±8σ, 40%)', none: 'none' };
+  let h = '<thead><tr><th>Lines</th><th>Baseline</th><th class="n">Lines</th><th class="n">Groups</th><th class="n">χ²/dof</th><th class="n">Pass</th><th class="n">Spread</th><th class="n">Same group</th><th class="n">Other</th></tr></thead><tbody>';
+  for (const s in subs) for (const v in vars) { const x = SUM.lr[v][s];
+    h += `<tr${v === 'base' ? ' class="hl"' : ''}><td>${v === 'base' ? subs[s] : ''}</td><td>${vars[v]}</td><td class="n">${x.n_lines}</td><td class="n">${x.n_groups_tested}</td><td class="n">${x.chi2_dof.toFixed(2)}</td><td class="n">${Math.round(100 * x.frac_groups_p01)}%</td><td class="n">${pct(x.med_spread)}</td><td class="n">${pct(x.med_absdiff_same, 2)}</td><td class="n">${pct(x.med_absdiff_other)}</td></tr>`; }
+  const c = rn.corrected;
+  h += `<tr><td>… and no H₂O / O₂</td><td>local, plus one r/n response change</td><td class="n">${c.n_lines}</td><td class="n">${c.n_groups_tested}</td><td class="n">${c.chi2_dof.toFixed(2)}</td><td class="n">${Math.round(100 * c.frac_groups_p01)}%</td><td class="n">${pct(c.med_spread)}</td><td class="n">${pct(c.med_absdiff_same, 2)}</td><td class="n">${pct(c.med_absdiff_other)}</td></tr></tbody>`;
+  $('#resTable').innerHTML = h;
+})();
+
+// ---------- small SVG charts ----------
+const NS = 'http://www.w3.org/2000/svg';
+const sv = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); return e; };
+function frame(box, { W = 520, H = 300, x, y, xlab, ylab, xt, yt, xf, yf }) {
+  box.innerHTML = ''; const m = { l: 52, r: 14, t: 10, b: 40 };
+  const svg = sv('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', role: 'img' }); box.append(svg);
+  const X = v => m.l + (x(v)) * (W - m.l - m.r), Y = v => H - m.b - (y(v)) * (H - m.t - m.b);
+  const g = sv('g', { class: 'grid' }); svg.append(g);
+  yt.forEach(v => { g.append(sv('line', { x1: m.l, x2: W - m.r, y1: Y(v), y2: Y(v) })); const t = sv('text', { x: m.l - 6, y: Y(v) + 4, 'text-anchor': 'end' }); t.textContent = yf(v); svg.append(t); });
+  xt.forEach(v => { const t = sv('text', { x: X(v), y: H - m.b + 16, 'text-anchor': 'middle' }); t.textContent = xf(v); svg.append(t); });
+  const ax = sv('line', { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: 'var(--fg-3)' }); svg.append(ax);
+  const xl = sv('text', { x: (m.l + W - m.r) / 2, y: H - 6, 'text-anchor': 'middle' }); xl.textContent = xlab; svg.append(xl);
+  const yl = sv('text', { x: 12, y: (m.t + H - m.b) / 2, transform: `rotate(-90 12 ${(m.t + H - m.b) / 2})`, 'text-anchor': 'middle' }); yl.textContent = ylab; svg.append(yl);
+  return { svg, X, Y, m, W, H };
+}
+const lg = (lo, hi) => v => (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
+const lin = (lo, hi) => v => (v - lo) / (hi - lo);
+
+function binChart() {
+  const series = [
+    { k: ['base', 'all'], name: 'All lines, local baseline', c: '--s1' },
+    { k: ['none', 'all'], name: 'All lines, no baseline', c: '--s2' },
+    { k: ['base', 'clean'], name: 'Peak ≥ 2× baseline, no H₂O/O₂', c: '--s3' },
+  ];
+  const mid = b => Math.sqrt(Math.max(b.S_lo, 5e-4) * Math.min(b.S_hi, 1));
+  const F = frame($('#binChart'), { x: lg(5e-4, 1), y: lg(5e-3, 1), xt: [1e-3, 1e-2, 1e-1, 1], yt: [0.01, 0.03, 0.1, 0.3, 1], xf: v => pct(v, v < 0.01 ? 1 : 0), yf: v => pct(v, 0),
+    xlab: 'RAGNAR ratio scatter Sij', ylab: 'median |di − dj|' });
+  F.svg.append(sv('line', { x1: F.X(0.01), x2: F.X(0.01), y1: F.m.t, y2: F.H - F.m.b, stroke: 'var(--fg-3)', 'stroke-dasharray': '3 3' }));
+  const noise = SUM.lr_bins.base.clean;
+  F.svg.append(sv('polyline', { points: noise.map(b => `${F.X(mid(b))},${F.Y(b.med_noise)}`).join(' '), fill: 'none', stroke: 'var(--fg-3)', 'stroke-width': 2, 'stroke-dasharray': '6 4' }));
+  const pts = [];
+  series.forEach(s => {
+    const b = SUM.lr_bins[s.k[0]][s.k[1]].filter(x => x.n_pairs >= 3);
+    F.svg.append(sv('polyline', { points: b.map(x => `${F.X(mid(x))},${F.Y(Math.max(x.med_absdiff, 5e-3))}`).join(' '), fill: 'none', stroke: `var(${s.c})`, 'stroke-width': 2 }));
+    b.forEach(x => { const c = sv('circle', { cx: F.X(mid(x)), cy: F.Y(Math.max(x.med_absdiff, 5e-3)), r: 4, fill: `var(${s.c})`, stroke: 'var(--surface)', 'stroke-width': 2 }); F.svg.append(c); pts.push([c, s, x]); });
+  });
+  pts.forEach(([c, s, x]) => { c.addEventListener('pointermove', e => showTip(`<b>${s.name}</b><br>S ${pct(x.S_lo, 2)}–${pct(Math.min(x.S_hi, 1), 0)}: <span class="v">${pct(x.med_absdiff, 2)}</span><br><span class="muted">${x.n_pairs} pairs, noise ${pct(x.med_noise, 2)}</span>`, e.clientX, e.clientY)); c.addEventListener('pointerleave', hideTip); });
+  $('#binLegend').innerHTML = series.map(s => `<span><span class="sw" style="background:var(${s.c})"></span>${s.name}</span>`).join('') + `<span><span class="sw" style="background:var(--fg-3)"></span>noise (dashed)</span>`;
+}
+
+function contrastChart() {
+  // deviation of each tested line's night change from its group's weighted mean, for groups with >= 2 tested lines
+  const by = {};
+  lr.lines.forEach((l, i) => { if (lr.delta[i] != null && lr.delta_none[i] != null && lr.err[i]) (by[l.g] = by[l.g] || []).push(i); });
+  const rows = [];
+  for (const g in by) { const ii = by[g]; if (ii.length < 2) continue;
+    for (const [key, name, c] of [['delta', 'Local baseline', '--s1'], ['delta_none', 'No baseline', '--s2']]) {
+      const w = ii.map(i => 1 / lr.err[i] ** 2), mu = ii.reduce((s, i, k) => s + w[k] * lr[key][i], 0) / w.reduce((a, b) => a + b, 0);
+      ii.forEach(i => { if (lr.contrast[i] != null && lr[key][i] != null && isFinite(mu)) rows.push({ i, x: lr.contrast[i], y: lr[key][i] - mu, name, c }); }); } }
+  const F = frame($('#contrastChart'), { x: lg(0.05, 300), y: lin(-0.6, 0.6), xt: [0.1, 1, 10, 100], yt: [-0.5, -0.25, 0, 0.25, 0.5], xf: v => String(v), yf: v => (v > 0 ? '+' : '') + Math.round(100 * v) + '%',
+    xlab: 'peak / baseline (lower night)', ylab: 'night change − group mean' });
+  F.svg.insertBefore(sv('rect', { x: F.X(0.05), y: F.m.t, width: F.X(2) - F.X(0.05), height: F.H - F.m.b - F.m.t, fill: 'var(--surface-2)' }), F.svg.firstChild.nextSibling);
+  F.svg.append(sv('line', { x1: F.X(0.05), x2: F.X(300), y1: F.Y(0), y2: F.Y(0), stroke: 'var(--fg-3)' }));
+  rows.sort((a, b) => (a.name === 'No baseline' ? -1 : 1));
+  rows.forEach(r => { const yy = Math.max(-0.6, Math.min(0.6, r.y)), x = Math.max(0.05, Math.min(300, r.x));
+    const c = sv('circle', { cx: F.X(x), cy: F.Y(yy), r: 4, fill: `var(${r.c})`, 'fill-opacity': 0.8, stroke: 'var(--surface)', 'stroke-width': 1.5 });
+    c.addEventListener('pointermove', e => showTip(`${lineTxt(lr.lines[r.i])}<br><b>${r.name}</b>: <span class="v">${(r.y > 0 ? '+' : '') + pct(r.y)}</span> from the group mean · peak/baseline ${r.x.toFixed(2)}`, e.clientX, e.clientY));
+    c.addEventListener('pointerleave', hideTip); F.svg.append(c); });
+  $('#contrastLegend').innerHTML = `<span><span class="sw" style="background:var(--s1)"></span>Local baseline</span><span><span class="sw" style="background:var(--s2)"></span>No baseline</span><span class="muted">values beyond ±60% drawn at the edge</span>`;
+}
+
+function rnChart() {
+  const d = REP.rn.slice().sort((a, b) => a.r_minus_n - b.r_minus_n);
+  $('#rnCap').innerHTML = `${d.length} clean groups have lines in both r and n. If the groups hold, r − n is the same in all of them and equals the change of the r/n response between the nights. The weighted mean is ${(100 * rn.offset).toFixed(2)} ± ${(100 * rn.offset_err).toFixed(2)}%, with χ²/dof ${rn.chi2_dof_about_offset.toFixed(2)} about it (band).`;
+  const W = 760, F = frame($('#rnChart'), { W, H: 240, x: lin(-0.5, d.length - 0.5), y: lin(-0.08, 0.1), xt: [], yt: [-0.05, 0, 0.05, 0.1], xf: v => '', yf: v => (v > 0 ? '+' : '') + Math.round(100 * v) + '%', xlab: 'groups with r and n lines, sorted', ylab: 'r − n night change' });
+  F.svg.append(sv('rect', { x: F.X(-0.5), width: F.X(d.length - 0.5) - F.X(-0.5), y: F.Y(rn.offset + rn.offset_err), height: F.Y(rn.offset - rn.offset_err) - F.Y(rn.offset + rn.offset_err), fill: 'var(--accent-soft)' }));
+  F.svg.append(sv('line', { x1: F.X(-0.5), x2: F.X(d.length - 0.5), y1: F.Y(0), y2: F.Y(0), stroke: 'var(--fg-3)' }));
+  F.svg.append(sv('line', { x1: F.X(-0.5), x2: F.X(d.length - 0.5), y1: F.Y(rn.offset), y2: F.Y(rn.offset), stroke: 'var(--accent)', 'stroke-width': 2 }));
+  d.forEach((r, k) => { const x = F.X(k), y0 = F.Y(Math.max(-0.08, r.r_minus_n - r.err)), y1 = F.Y(Math.min(0.1, r.r_minus_n + r.err));
+    F.svg.append(sv('line', { x1: x, x2: x, y1: y0, y2: y1, stroke: 'var(--s1)', 'stroke-width': 2 }));
+    const c = sv('circle', { cx: x, cy: F.Y(Math.max(-0.08, Math.min(0.1, r.r_minus_n))), r: 4.5, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2 });
+    const gg = REP.groups.find(x => x.g === r.group);
+    c.addEventListener('pointermove', e => showTip(`<b>Group ${r.group}</b> ${gg ? gg.vgroup : ''}<br>r − n = <span class="v">${(r.r_minus_n > 0 ? '+' : '') + pct(r.r_minus_n, 2)}</span> ± ${pct(r.err, 2)}<br><span class="members">${gg ? gg.members : ''}</span>`, e.clientX, e.clientY));
+    c.addEventListener('pointerleave', hideTip); F.svg.append(c); });
+}
+
+// ---------- m arm ----------
+const ms = SUM.m.base, mn = SUM.m.none;
+$('#mText').innerHTML = `Six 60 s visits within 9 minutes, 724–767 nm, measured per fibre on the native pixels and combined per spectrograph. ${ms.n_lines} lines reach S/N ≥ 20 per visit. Their ratios scatter by ${pct(ms.med_ratio_scatter)} over the visits, against ${pct(ms.med_noise)} expected from the fibre-to-fibre noise. The sky barely changed in 9 minutes, so these data neither confirm nor reject the m groups. Without a baseline the scatter doubles to ${pct(mn.med_ratio_scatter)}: the continuum under the lines changed within 9 minutes, and the baseline removes it.`;
+const mPanels = [
+  { t: 'RAGNAR S<sub>ij</sub>', s: 'line centre, 360 skies', kind: 'seq', M: MSm },
+  { t: 'PFS m: scatter of ln ratio', s: 'over 6 visits, per spectrograph', kind: 'seq', M: MOm },
+  { t: 'PFS m: observed / noise', s: '≈ 1 everywhere: noise-limited', kind: 'div', M: MRm },
+];
+const mMats = mPanels.map(p => { const pn = el('div', { class: 'panel' }, `<h4>${p.t}</h4><div class="sub">${p.s}</div>`), box = el('div', { class: 'mbox' }); pn.append(box); $('#mPanels').append(pn);
+  return new Mat(box, { n: nM, kind: p.kind, get: (i, j) => p.M[i * nM + j] }); });
+mMats.forEach(M => M.listeners.push((t, c, e) => {
+  if (t === 'leave') { hideTip(); mMats.forEach(x => x.cross(null)); return; } if (t !== 'move') return;
+  mMats.forEach(x => x.cross(c)); const i = M.idx[c.row], j = M.idx[c.col];
+  const r = MRm[i * nM + j];
+  showTip(`${lineTxt(mm.lines[i])}<br>${lineTxt(mm.lines[j])}<br>RAGNAR S = <span class="v">${i === j ? '0' : pct(decS(MSm[i * nM + j]), 2)}</span> · observed <span class="v">${i === j ? '0' : pct(decS(MOm[i * nM + j]), 1)}</span>${r < 255 ? ' · ×' + Math.pow(10, -1 + 3 * r / 254).toFixed(2) + ' noise' : ''}`, e.clientX, e.clientY);
+}));
+
+// ---------- group table ----------
+const G = REP.groups, gOn = new Set(); let selG = null;
+const gChips = $('#gChips');
+['b', 'r', 'n', 'm', 'cross-arm'].forEach(a => { const b = el('button', { type: 'button', class: 'chip', 'aria-pressed': 'false' }, a);
+  b.onclick = () => { gOn.has(a) ? gOn.delete(a) : gOn.add(a); b.setAttribute('aria-pressed', gOn.has(a)); renderGroups(); }; gChips.append(b); });
+$('#gSearch').addEventListener('input', renderGroups); $('#gTested').addEventListener('change', renderGroups);
+const gIdx = {}; all.lines.forEach((l, i) => { (gIdx[l.g] = gIdx[l.g] || []).push(i); });
+function renderGroups() {
+  const q = $('#gSearch').value.trim().toLowerCase(), tested = $('#gTested').checked;
+  const rows = G.filter(g => [...gOn].every(a => a === 'cross-arm' ? g.arms.length > 1 : g.arms.includes(a)) && (!tested || (g.n_tested_c || 0) >= 2)
+    && (!q || (g.vgroup + ' ' + g.members + ' ' + g.upper_states + ' ' + g.g).toLowerCase().includes(q)));
+  $('#gCount').textContent = `${rows.length} of ${G.length}`;
+  const tb = $('#gtable tbody'); tb.innerHTML = '';
+  rows.forEach(g => {
+    const st = (g.n_tested_c || 0) >= 2 ? (g.p_c > 0.01 ? '<span class="pill ok">✓ holds</span>' : '<span class="pill no">✕ changed</span>') : '<span class="pill na">not tested</span>';
+    const red = (g.n_tested_c || 0) >= 2 ? (g.chi2_c / (g.n_tested_c - 1)).toFixed(1) : '';
+    const tr = el('tr', {}, `<td class="n">${g.g}</td><td class="mono">${g.arms}</td><td class="n">${g.n}</td><td>${g.vgroup}</td><td class="n">${g.n_upper}</td><td class="n">${pct(g.scatter, 2)}</td><td class="n">${g.n_tested_c || 0}</td><td class="n">${red}</td><td>${st}</td><td class="members">${g.members.replaceAll('; ', ' · ')}</td>`);
+    if (g.g === selG) tr.classList.add('hl');
+    tr.onclick = () => { selG = g.g; big.mark(new Set(gIdx[g.g] || [])); renderGroups(); $('#ragnar').scrollIntoView({ behavior: 'smooth' }); };
+    tb.append(tr);
+  });
+}
+
+// ---------- draw everything ----------
+function drawAll() { drawRamps(); big.render(big.idx.length ? null : armIdx()); drawStrip(); renderLR(); mMats.forEach(M => M.render(M.idx.length ? null : [...Array(nM).keys()])); binChart(); contrastChart(); rnChart(); }
+drawAll(); renderGroups();
+const retheme = () => { refreshLuts(); drawAll(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { big.render(); lrMats.forEach(M => M.render()); mMats.forEach(M => M.render()); drawStrip(); }, 150); });
+})();
+</script>

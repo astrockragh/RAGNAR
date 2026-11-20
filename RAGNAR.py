@@ -6,12 +6,14 @@ import os.path as osp
 from dev import get_spectra_and_peaks, define_lines_and_intensities
 from dev import make_dataframe, add_absorption_origin
 from dev.species_intensities import DATA_PATH
+from dev.covariation import add_covariation, save_covariation
 
 def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'lineList_test', importance_limit_group = 1e-2, chem_scatters = 3,\
                   min_wav = 360, max_wav = 1300, steps_per_line = 100, line_spread = 0.1, resolution = np.inf, dlambda = 15, intensity_cut = 0.0, inclusion_limit = 1e-3,\
                   linewidth_scatters = 1, LSF_err = 0.03, continuum = True, aerosols = ['background', 'volcanic'], pwvs = [0.0, 2.0], zds = [0, 40], base = '~/../../tigress/cj1223/', \
                   data_path = DATA_PATH, use_centroider = False, total_lim = 0.95, contribution_lim = 0.99, originDf_file = 'grid_mk50',\
-                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], obs = 'MaunaKea', verbose = 0, r_scat = 0.0125, wf = 3.4, r_hot_scales = [1.0]):
+                          important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], obs = 'MaunaKea', verbose = 0, r_scat = 0.0125, wf = 3.4, r_hot_scales = [1.0],\
+                  covariation = True, covar_threshold = 0.01, covar_min_intensity = 0.0):
     
     '''Function make a linelist for use for wavelength calibration
     
@@ -54,6 +56,12 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     r_scat, wf: the line wing, the fraction of each line's flux in an exponential scattering wing and its scale length in units of the Gaussian sigma.
             PFS sky spectra (2026-10) favour about 0.005 (r) and 0.003 (n), and 0.0125 in b
 
+    covariation: find the lines whose intensities vary together across the simulated spectra (dev/covariation.py) and add the
+            upper_state, vgroup and covar_* columns. Lines in one covar_group keep their intensity ratios to within covar_threshold
+            (the scatter of ln(I_i/I_j)) over everything the run varies. Robust lines brighter than covar_min_intensity are grouped.
+            With save_name, the per-spectrum intensities are saved as {save_name}_{date}_covar.npz, for grouping across runs
+            (covariation.combine_covariation, e.g. the arms of one spectrograph run with the same grid and seed)
+
     verbose: 0 = print almost nothing, 1 = print things to follow the progress, 2 = print enough to do some approximative debugging
     
     --------------------------
@@ -90,9 +98,9 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     ### Make the spectra and get the peaks ###
     ##########################################
 
-    peak_wavs, specs, continuum_specs, transmission_curves, transmission_wavs = get_spectra_and_peaks(wav_range, Trots = Trots, Tvibs = Tvibs, chem_scatters = chem_scatters, linewidth_scatters = linewidth_scatters,\
+    peak_wavs, specs, continuum_specs, transmission_curves, transmission_wavs, spec_params = get_spectra_and_peaks(wav_range, Trots = Trots, Tvibs = Tvibs, chem_scatters = chem_scatters, linewidth_scatters = linewidth_scatters,\
                           LSF_err = LSF_err, inclusion_limit = inclusion_limit, cont = continuum, intensity_cut = intensity_cut, line_spread = line_spread, resolution = resolution, dlambda = dlambda, use_centroider = use_centroider,\
-                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, obs = obs, verbose = verbose, r_scat = r_scat, wf = wf, r_hot_scales = r_hot_scales)
+                        aerosols = aerosols, pwvs = pwvs, zds = zds, base = base, data_path = data_path, obs = obs, verbose = verbose, r_scat = r_scat, wf = wf, r_hot_scales = r_hot_scales, return_params = True)
     if verbose!=0:
         print('Finding the common lines')
         
@@ -138,6 +146,17 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
     lineDf = add_absorption_origin(lineDf, line_spread = line_spread, resolution = resolution, total_lim = total_lim, contribution_lim = contribution_lim, base = base,
                                     originDf_file = originDf_file, important_species = important_species)
     
+    ##############################################
+    ### Lines whose intensities vary together ###
+    ##############################################
+
+    if covariation:
+        if verbose > 0:
+            print('Grouping the lines whose intensities vary together')
+        sig_lines = line_spread if resolution == np.inf else lineDf.wav.to_numpy()/resolution
+        lineDf, covar_info = add_covariation(lineDf, specs, wav_range, sig_lines, threshold = covar_threshold, min_intensity = covar_min_intensity,
+                                             Trot = np.mean(Trots), Tvib = np.mean(Tvibs), data_path = data_path)
+
     if verbose>0:
         print(f'Linelist with {len(lineDf)} stable lines in has been made')
     if save_name:
@@ -152,6 +171,8 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
         
         with open(path+'.pkl', "wb") as handle:
             pickle.dump(lineDf, handle)
+        if covariation:
+            save_covariation(path+'_covar.npz', lineDf, covar_info, spec_params)
         
         if verbose > 0:
             print(f'Saving the linelist at {f"lineLists/{save_name}_{today}.csv"}')

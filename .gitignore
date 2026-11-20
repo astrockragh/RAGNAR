@@ -10,6 +10,7 @@ lineLists/*
 !lineLists/sweep_0.0637_1_m_fix4_691-908nm_20261116.csv
 !lineLists/sweep_unified_1_fix4_20261007.csv
 !lineLists/sedm_*.csv
+!lineLists/sweep_*_0_*_fix4_20261120.csv
 .DS_store
 
 #egg file and pycaches
@@ -131,3 +132,5 @@ validation/tier2/line_level_fix*.csv
 pfs_mr/out/stack_points.csv
 sedm/out/mocks.csv
 sedm/out/feature_mocks.csv
+pfs_covar/out/obs_lr.csv
+pfs_covar/out/report_data.json

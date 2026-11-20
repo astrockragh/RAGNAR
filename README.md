@@ -61,6 +61,9 @@ If the code ran successfully, a `lineLists` directory should have been created w
 - `contribution_lim = 0.99`: If a species has transmission below this for a given line, it contributes significantly.
 - `important_species = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4']`: Possible absorption origins to consider for determining which species cause absorption. See below in `outputs` for a more detailed description of each species.
 - `verbose = 1`: 0 = print almost nothing, 1 = print enough to follow progress, 2 = print enough to do some approximate debugging.
+- `covariation = True`: Find the lines whose intensities vary together (`dev/covariation.py`), see the `covar_*` columns below.
+- `covar_threshold = 0.01`: The largest scatter of ln(I_i/I_j) over the simulated spectra for two lines to be in one group. 0.01 means their ratio is fixed to 1%.
+- `covar_min_intensity = 0`: Only robust lines brighter than this are grouped.
 
 For all of these fun options, sophisticated line lists are output, containing information about
 
@@ -78,6 +81,14 @@ For all of these fun options, sophisticated line lists are output, containing in
 - `detection_prob`: The fraction of the simulated spectra that the line is identifiable in.
 - `subline_wav`: The wavelengths of the sublines that contribute more than a preset fraction of the total line intensity at line centre. 
 - `subline_I`: The fractional intensity of the line that the sublines contribute at line center. The sublines must contribute more than a preset fraction of the total line intensity at line center. 
+- `upper_state`, `upper_frac`: The upper state (OH v', J', N'; e/f together) that contributes most at the line centre, and its fraction.
+- `vgroup`, `vgroup_frac`: The same for the upper vibrational level (OH) or the species.
+- `covar_group`: Lines with the same number keep their intensity ratios to within `covar_threshold` over everything the run varies (complete linkage, so every pair in the group does). -1 for lines that were not grouped (not robust, or fainter than `covar_min_intensity`).
+- `covar_n`: The number of lines in the group.
+- `covar_scatter`: The largest scatter of ln(I_i/I_j) to the other lines in the group.
+- `covar_nearest`: The smallest scatter of ln(I_i/I_j) to any other grouped line, i.e. how close a line on its own is to having a partner.
+
+With `save_name`, the intensity of every line in every simulated spectrum is also saved as `lineLists/{save_name}_{date}_covar.npz`. Runs that simulated the same skies (the same grid and the same seed, e.g. the arms of one spectrograph) can then be grouped together with `dev.covariation.combine_covariation`. The intensities are line-only (no continuum), so measure the lines in data above a local baseline taken from the data, not from the `continuum` column. `pfs_covar/` tests the groups against PFS sky spectra.
 - `err_important`: The intensity error in considering only the sublines which contribute more than a preset fraction of the total line intensity at line centre.
 - `origin_Ids`: The `ID`'s of the lines in the table which contain detailed information about all sublines.
 - `transmission`: The average atmospheric transmission of the line.
