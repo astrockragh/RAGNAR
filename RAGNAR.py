@@ -137,7 +137,9 @@ def ragnar(Trots = [175, 190, 205], Tvibs = [8000, 10500, 13000], save_name = 'l
         if not osp.isdir('lineLists'):
             os.mkdir('lineLists')
             
-        today = datetime.today().strftime("%d%m%Y")
+#         today = datetime.today().strftime("%d%m%Y")
+        today = datetime.today().strftime("%Y%m%d")
+
         path = f'lineLists/{save_name}_{today}'
         lineDf.to_csv(path+'.csv', index = False)
         

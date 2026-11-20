@@ -3,7 +3,7 @@ import numpy as np
 import os.path as osp
 import pandas as pd
 
-def get_O2_at_T(Trot, path = 'data/', verbose = False):
+def get_O2_at_T(Trot, path = osp.expanduser('~/work/OHspec/make_linelists/data/'), verbose = False):
     
     '''
     Calculates the intensities of the two strong b^1 Sigma_g^+ (0 - 1) / a^1 \Delta_g (0 - 0) bands at a given temperature
@@ -76,7 +76,7 @@ def get_atomic_lines(path = 'data/', verbose = False):
 ### OH below here ###
 #####################
 
-def get_pgopher_linelist(path = 'data/'):
+def get_pgopher_linelist(path = osp.expanduser('~/work/OHspec/make_linelists/data/')):
     '''
         Function to load pgopher line list.
         

@@ -3,7 +3,7 @@ import numpy as np
 import os.path as osp
 import pandas as pd
 
-from .utils import gauss, gauss_conv, get_blocks
+from .utils import gauss, gauss_conv, get_blocks, gauss_exp_scatter
 from .species_intensities import get_pgopher_linelist, get_O2_at_T, get_atomic_lines, make_OH_intensities
 
 from scipy import stats
@@ -29,9 +29,9 @@ if is_notebook():
 else:
     from tqdm import tqdm
 
-def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], linewidth_scatters = 3, LSF_err = 0.05, inclusion_limit = 1e-3, chem_scatters = 3, use_centroider = True,\
+def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], linewidth_scatters = 3, LSF_err = 0.06, line_wing = True, r_scat = 0.0125, wf = 3.4, inclusion_limit = 1e-3, chem_scatters = 5, use_centroider = True,\
                           intensity_cut = 5e-6, line_spread = 0.1, resolution = np.inf, dlambda = 15, aerosols = ['background', 'volcanic'],\
-                          pwvs = [0.0, 2.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = 'data/', obs = 'MaunaKea', verbose = 1):
+                          pwvs = [0.0, 4.0], zds = [0,30], cont = True, base = '~/../../tigress/cj1223/', data_path = 'data/', obs = 'MaunaKea', verbose = 1):
     
     '''
     Function to simulate spectra, and find the wavelength peaks of those spectra
@@ -42,6 +42,9 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
     
     Trots, Tvibs: arrays or lists of the rotational/vibrational temperatures to simulate [K]
     
+    line_wing: whether or not to include an exponential scattering wing
+    r_scat: the fraction of intensity to go into the wing
+    wf: the ratio of the Gaussian sigma to the gamma of the exponential distribution
     inclusion_limit: The limit for how little a line can contribute at its own line center for us to include it in calculations
     intensity_cut: Consider only peaks that are stronger than this as relevant lines
     line_spread: The Gaussian line width of lines, as measured IN THE INSTRUMENT [nm]
@@ -196,16 +199,37 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
                                             ls = line_spread*l
                                         else:
                                             ls = pos/resolution*l
+                                            
                                         if species == 'OH':
-                                            spec_OH[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_OH[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_OH[mask] += I*gauss(wav_range[mask], pos, ls)
+                                                
                                         if species == 'O2' and pos < 1000:
-                                            spec_O2_B[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_O2_B[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_O2_B[mask] += I*gauss(wav_range[mask], pos, ls)
+                                                
                                         if species == 'O2' and pos > 1000:
-                                            spec_O2_a1[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_O2_a1[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_O2_a1[mask] += I*gauss(wav_range[mask], pos, ls)
+                                                
                                         if species == 'OI(1S)':
-                                            spec_O_green[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_O_green[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_O_green[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            
                                         if species == 'OI(1D)':
-                                            spec_O_red[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_O_red[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_O_red[mask] += I*gauss(wav_range[mask], pos, ls)
+                                                
                                         if species == 'NaI':
                                             line_ratio = (Tr/np.mean(Trots)) # do line ratio variation, correlates with Trot
                                             if k == 0:
@@ -213,9 +237,18 @@ def get_spectra_and_peaks(wav_range, Trots = [180, 215], Tvibs = [8500, 13000], 
                                                 k+=1
                                             else:
                                                 Ir = 1/line_ratio
-                                            spec_Na[mask] += I*Ir*gauss(wav_range[mask], pos, ls)
+                                            
+                                            if line_wing:
+                                                spec_Na[mask] += I*Ir*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                            else:
+                                                spec_Na[mask] += I*Ir*gauss(wav_range[mask], pos, ls)
+                                        
                                         if species == 'H':
-                                            spec_H[mask] += I*gauss(wav_range[mask], pos, ls)
+                                            if line_wing:
+                                                spec_H[mask] += I*gauss_exp_scatter(wav_range[mask], pos, ls, r_scat, wf*ls)
+                                                
+                                            else:
+                                                spec_H[mask] += I*gauss(wav_range[mask], pos, ls)
 
                                             
                             
@@ -257,7 +290,7 @@ def make_intensity_ratios(alpha):
                     #OH,     O_2_B,       O_2_a1,   green OI, red OI,    NaD
     return np.array([X_O3, X_O**2*X_O2, X_O**2*X_red, X_O**3, X_red, X_O*X_O3])
 
-def get_relevant_lines(lineDf, delta_local = None, sigma_line = 0.1, resolution = np.inf, inclusion_limit = 3e-4):
+def get_relevant_lines(lineDf, delta_local = None, sigma_line = 0.1, resolution = np.inf, line_wing = True, r_scat = 0.0125, wf = 3.4, inclusion_limit = 3e-4):
     '''
     Given a DataFrame of lines, find which lines contribute significantly.
     We consider only lines which, given a Gaussian line spread (sigma_line), contributes more than a given fraction (1/inclusion limit) of the intensity at its own line center
@@ -297,9 +330,15 @@ def get_relevant_lines(lineDf, delta_local = None, sigma_line = 0.1, resolution 
         individual_lines = [] # list of line intensities at the line 
         for pos, I in zip(local_lines['Position'], local_lines['Intensity']):
             if resolution == np.inf:
-                line = I*gauss(w0, pos, sigma_line) # get contribution from local lines at w0 which is the wavelength in question
+                if line_wing:
+                    line = I*gauss_exp_scatter(w0, pos, sigma_line, r_scat, wf*sigma_line)
+                else:
+                    line = I*gauss(w0, pos, sigma_line) # get contribution from local lines at w0 which is the wavelength in question
             else:
-                line = I*gauss(w0, pos, w0*resolution) # get contribution from local lines at w0 which is the wavelength in question
+                if line_wing:
+                    line = I*gauss_exp_scatter(w0, pos, w0/resolution, r_scat, wf*w0/resolution)
+                else:
+                    line = I*gauss(w0, pos, w0/resolution) # get contribution from local lines at w0 which is the wavelength in question
             individual_lines.append(line)
         
         if resolution == np.inf: # if the resolution is not set
@@ -645,7 +684,7 @@ def load_transmission(aerosol, pwv, zd, basedir, obs = 'MaunaKea', min_wav = 360
     Returns: DataFrame with transmission curve
     '''
     
-    path = osp.expanduser(basedir+f'{obs}_aerosol_{aerosol}_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
+    path = osp.expanduser(basedir+f'/modtran_output_LBL_{aerosol}/'+f'{obs}_PWV{pwv}_ZD{zd}_highres.csv' ) #this is a 200 MB file, if Tigress is really slow, I also have them on scratch/gpfs
 
     trans = pd.read_csv(path, skiprows = 7, skipfooter = 1, engine='python') # read the csv
     trans.columns = ['Freq', 'combin', 'total', 'path', 'surface'] # define column names without weird spaces. Could consider dropping the last three columns since they are not used

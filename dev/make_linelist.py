@@ -247,7 +247,7 @@ def make_dataframe(mu_stable_wav, var_stable_wav, mu_stable_I, var_stable_I, cou
 ############## Needs to change base path here ###############
 #############################################################
 
-def load_species_transmission(file = 'grid_mk50', base = '~/../../tigress/cj1223/modtran_species_output', species_include = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
+def load_species_transmission(file = 'grid_mk50', base = '~/../../tigress/cj1223/', species_include = ['combin', 'aercld', 'molec', 'H2O', 'O3', 'O2', 'CO2', 'CH4'], verbose = 1):
     '''Function which loads a low resolution MODTRAN6 curve, since the low res runs are the only ones that output species-based absorption
         Inputs:
         file: which modtran low res curve to use
@@ -259,9 +259,9 @@ def load_species_transmission(file = 'grid_mk50', base = '~/../../tigress/cj1223
     if verbose == 2:
         print('Loading low-resolution species dependent transmission curve')
     
-    trans = pd.read_csv(osp.expanduser(base+f'/{file}.csv'), skiprows = 3, nrows = 1, engine='python') # load file to get column names
+    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 3, nrows = 1, engine='python') # load file to get column names
     columns = trans.columns
-    trans = pd.read_csv(osp.expanduser(base+f'/{file}.csv'), skiprows = 4, skipfooter = 1, engine='python') # load data
+    trans = pd.read_csv(osp.expanduser(base+f'modtran_species_output/{file}.csv'), skiprows = 4, skipfooter = 1, engine='python') # load data
     trans.columns = columns
     
     mins = trans.describe().iloc[3] # get the minimums of transmission per species

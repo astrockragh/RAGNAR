@@ -17,6 +17,25 @@ def gauss(x, mu, sig):
     '''
     return 1.0 / (np.sqrt(2.0 * np.pi) * sig) * np.exp(-np.power((x - mu) / sig, 2.0) / 2)
 
+def gauss_exp_scatter(x, mu, sig, r_exp, gamma_exp):
+    '''
+    Normalized Gaussian on a grid with an exponential scattering wing. This is the profile we have in PFS
+    with a Gaussian core and an exponential scattering wing.
+    
+    Inputs:
+    x: the grid on which to find the values
+    mu: mean of the distribution, both the gaussian and the exponential
+    sig: width of the Gaussian
+    
+    --------------------------
+    Returns: the Gaussian on the grid along with the scattering wing
+    '''
+    dx = (x - mu)
+    gauss_core = 1.0 / (np.sqrt(2.0 * np.pi) * sig) * np.exp(-np.power(dx / sig, 2.0) / 2)
+    exp_wing = r_exp/gamma_exp*np.exp(-abs(dx)/gamma_exp)
+    
+    return gauss_core+exp_wing
+
 def gauss_conv(wav, xs, ys, sig=0.001): #this sigma should technically be wavelength dependent and be dependent on the thermal broadening of the line, but it doesn't really matter
     '''
     Gaussian convolution for Line Spread Function
